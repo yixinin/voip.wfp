@@ -193,7 +193,7 @@ namespace Voip
             var endPoint = new IPEndPoint(IPAddress.Parse(this.Host), this.Port);
             Debug.WriteLine("connect to " + endPoint.ToString());
             await _socketConn.ConnectAsync(endPoint);
-            
+
             if (_socketConn.Connected)
             {
                 JoinLive();
@@ -278,7 +278,8 @@ namespace Voip
                     {
                         //视频转换
                         var buf = Util.GetVideoBuffer(mat.ToBytes());
-                        SendBuffer(buf);
+                         
+                        
                     }
                 }
                 catch (Exception ex)
@@ -324,7 +325,7 @@ namespace Voip
             //var waveFormat = new WaveFormat(AudioRate, AudioBits, AudioChannels);
             var blockAlign = AudioChannels * (AudioBits / 8);
             int averageBytesPerSecond = AudioRate * blockAlign;
-            
+
             var waveFormat = WaveFormat.CreateCustomFormat(
                 WaveFormatEncoding.Pcm,
                 AudioRate,
