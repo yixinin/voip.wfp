@@ -1,6 +1,9 @@
 ﻿
+using NAudio.Wave;
 using System;
 using System.Collections.Generic;
+using System.Diagnostics;
+using System.IO;
 using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
@@ -23,40 +26,64 @@ namespace Voip
     /// </summary>
     public partial class MainWindow : Window
     {
+
+        public static MainWindow Current { get; set; }
+
+        const string HOST = "10.0.0.218";
+        const short TCP_PORT = 9901;
+        const string WsAddr = "ws://localhost:9902/live";
+        const string PROTOCOL = "tcp";
+
+        const string TOKEN = "00000000000000000000000000000000";
+        const long ROOM_ID = 10240;
+
+        public VoipClient VoipClient;
+
+
+        public WaveOut audioPlayer;
+        public BufferedWaveProvider audioProvider;
+        //public Stream audioStream;
+
         public MainWindow()
         {
             InitializeComponent();
+            VoipClient = new VoipClient(HOST, TCP_PORT, TOKEN, ROOM_ID);
+            VoipClient.AudioBufferRecieved += VoipClient_AudioBufferRecieved;
+            VoipClient.VideoBufferRecieved += VoipClient_VideoBufferRecieved;
+            audioPlayer = new WaveOut();
+
+
+            var blockAlign = VoipClient.AudioChannels * (VoipClient.AudioBits / 8);
+            int averageBytesPerSecond = VoipClient.AudioRate * blockAlign;
+
+
+            var waveFormat = WaveFormat.CreateCustomFormat(
+                WaveFormatEncoding.Pcm,
+                VoipClient.AudioRate,
+                VoipClient.AudioChannels,
+                averageBytesPerSecond,
+                blockAlign,
+               VoipClient.AudioBits);
+            audioProvider = new BufferedWaveProvider(waveFormat);
+            audioProvider.DiscardOnBufferOverflow = true;
+            audioPlayer.Init(audioProvider);
+            audioPlayer.Play();
+            Current = this;
         }
 
-        public void GetVideoCapture()
+
+
+        private void VoipClient_VideoBufferRecieved(object sender, MediaBufferArgs e)
         {
-            //OpenCvSharp4.Windows
-            OpenCvSharp.VideoCapture cap = new OpenCvSharp.VideoCapture(0);
-            cap.FrameWidth = 320;
-            cap.FrameHeight = 320;
-            cap.Fps = 24;
-            cap.AutoFocus = true;
-            while (true)
-            {
-                var frame = new OpenCvSharp.Mat();
-                var hasFrame = cap.Read(frame);
-                if (!hasFrame){
-                    break;
-                }
-            }
+            Debug.WriteLine("recieved video buffer", e.Buffer.Length);
         }
 
-
-        public void GetAudioCapture()
+        private void VoipClient_AudioBufferRecieved(object sender, MediaBufferArgs e)
         {
-            var cap = new NAudio.Wave.WaveIn();
-            cap.WaveFormat = new NAudio.Wave.WaveFormat(44100, 16, 1);
-            cap.DataAvailable += Cap_DataAvailable;
-        }
-
-        private void Cap_DataAvailable(object sender, NAudio.Wave.WaveInEventArgs e)
-        {
-            var buf = e.Buffer;
+           
+            audioProvider.AddSamples(e.Buffer, 0, e.Buffer.Length);
+            
+            //Debug.WriteLine("recieved audio buffer", e.Buffer.Length);
         }
     }
 }
