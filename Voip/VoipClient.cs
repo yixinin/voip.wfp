@@ -295,7 +295,7 @@ namespace Voip
                         return;
                     }
 
-                    videoQueue.Enqueue(new VideoPacket(mat.ImEncode(".jpg")));
+                    videoQueue.Enqueue(new VideoPacket(mat.ToBytes()));
                 }
                 catch (Exception ex)
                 {
@@ -308,57 +308,6 @@ namespace Voip
             }
 
         }
-
-        private unsafe void EncodeVideo(VideoPacket[] ps, MemoryStream fs)
-        {
-            var sourceSize = new System.Drawing.Size(Height, Width);
-            var sourcePixelFormat = AVPixelFormat.AV_PIX_FMT_BGR24;
-            var destinationSize = sourceSize;
-            var destinationPixelFormat = AVPixelFormat.AV_PIX_FMT_YUV420P;
-            using (var vfc = new VideoFrameConverter(sourceSize, sourcePixelFormat, destinationSize, destinationPixelFormat))
-            {
-                using (var vse = new H264VideoStreamEncoder(fs, Fps, destinationSize))
-                {
-                    var frameNumber = 0;
-                    //读取
-                    foreach (var p in ps)
-                    {
-                        byte[] bitmapData;
-                        using (var ms = new MemoryStream(p.Data))
-                        {
-                            using (var frameImage = Image.FromStream(ms))
-                            {
-                                using (var frameBitmap = frameImage is Bitmap bitmap ? bitmap : new Bitmap(frameImage))
-                                {
-                                    bitmapData = Util.GetBitmapData(frameBitmap);
-                                }
-                            }
-                        }
-
-
-                        fixed (byte* pBitmapData = bitmapData)
-                        {
-                            var data = new byte_ptrArray8 { [0] = pBitmapData };
-                            var linesize = new int_array8 { [0] = bitmapData.Length / sourceSize.Height };
-                            var frame = new AVFrame
-                            {
-                                data = data,
-                                linesize = linesize,
-                                height = sourceSize.Height
-                            };
-                            var convertedFrame = vfc.Convert(frame);
-                            convertedFrame.pts = frameNumber * Fps;
-                            vse.Encode(convertedFrame);
-                        }
-
-                        //Console.WriteLine($"frame: {frameNumber}");
-                        frameNumber++;
-
-                    }
-                }
-            }
-        }
-
 
         //关闭摄像头
         public void StopCaptureVideo()
@@ -474,7 +423,7 @@ namespace Voip
                 {
                     Debug.WriteLine(string.Format("error: audio buf send, n={0}, bodySize={1}", n, bodySize));
                 }
-                Debug.WriteLine(string.Format("audio samples:{0}, size:{1}", ps.Length, buf.Length));
+                //Debug.WriteLine(string.Format("audio samples:{0}, size:{1}", ps.Length, buf.Length));
             }
         }
 
@@ -483,7 +432,6 @@ namespace Voip
             while (VideoOn)
             {
                 var total = Fps;
-                var bodySize = 0;
                 var ps = new VideoPacket[total];
                 for (var i = 0; i < total; i++)
                 {
@@ -496,7 +444,6 @@ namespace Voip
                     }
                     var p = videoQueue.Dequeue();
                     ps[i] = p;
-                    bodySize += p.Data.Length;
                 }
 
                 //转码
@@ -526,6 +473,58 @@ namespace Voip
 
             }
         }
+
+        private unsafe void EncodeVideo(VideoPacket[] ps, MemoryStream fs)
+        {
+            var sourceSize = new System.Drawing.Size(Height, Width);
+            var sourcePixelFormat = AVPixelFormat.AV_PIX_FMT_BGR24;
+            var destinationSize = sourceSize;
+            var destinationPixelFormat = AVPixelFormat.AV_PIX_FMT_YUV420P;
+            using (var vfc = new VideoFrameConverter(sourceSize, sourcePixelFormat, destinationSize, destinationPixelFormat))
+            {
+                using (var vse = new H264VideoStreamEncoder(fs, Fps, destinationSize))
+                {
+                    var frameNumber = 0;
+                    //读取
+                    foreach (var p in ps)
+                    {
+                        byte[] bitmapData;
+                        using (var ms = new MemoryStream(p.Data))
+                        {
+                            using (var frameImage = Image.FromStream(ms))
+                            {
+                                using (var frameBitmap = frameImage is Bitmap bitmap ? bitmap : new Bitmap(frameImage))
+                                {
+                                    bitmapData = Util.GetBitmapData(frameBitmap);
+                                }
+                            }
+                        }
+
+
+                        fixed (byte* pBitmapData = bitmapData)
+                        {
+                            var data = new byte_ptrArray8 { [0] = pBitmapData };
+                            var linesize = new int_array8 { [0] = bitmapData.Length / sourceSize.Height };
+                            var frame = new AVFrame
+                            {
+                                data = data,
+                                linesize = linesize,
+                                height = sourceSize.Height,
+                                width = sourceSize.Width,
+                            };
+                            var convertedFrame = vfc.Convert(frame);
+                            convertedFrame.pts = frameNumber * Fps;
+                            vse.Encode(convertedFrame);
+                        }
+
+                        //Console.WriteLine($"frame: {frameNumber}");
+                        frameNumber++;
+
+                    }
+                }
+            }
+        }
+
         private void Recv(CancellationToken ct)
         {
             while (true)

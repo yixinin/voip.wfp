@@ -124,7 +124,6 @@
     <Compile Include="FFmpegHelper.cs" />
     <Compile Include="FFmpegH264VideoStreamEncoder.cs" />
     <Compile Include="FFmpegMediaDecoder.cs" />
-    <Compile Include="FFmpegSample.cs" />
     <Compile Include="FFmpegVideoFrameConverter.cs" />
     <Compile Include="FFmpegVideoStreamDecoder.cs" />
     <Compile Include="GroupPage.xaml.cs">

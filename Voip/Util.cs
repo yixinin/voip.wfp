@@ -43,7 +43,7 @@ namespace Voip
         {
             var len = new byte[4];
             Array.Copy(header, 2, len, 0, 4);
-           
+
             return (int)BytesToUint32(len);
         }
         public static byte[] GetAudioHeader(int bodySize)
@@ -53,7 +53,7 @@ namespace Voip
             header[0] = 2;
             var sizes = Uint32ToBytes(bodySize);
             Array.Copy(sizes, 0, header, 2, 4);
-           
+
             return header;
         }
         public static byte[] GetVideoHeader(int bodySize)
@@ -63,7 +63,7 @@ namespace Voip
             header[0] = 2;
             var sizes = Uint32ToBytes(bodySize);
             Array.Copy(sizes, 0, header, 2, 4);
-           
+
             return header;
         }
 
@@ -89,7 +89,7 @@ namespace Voip
             var sizes = Uint32ToBytes(body.Length);
             Array.Copy(sizes, 0, buf, 2, 4);
             Array.Copy(body, 0, buf, 6, body.Length);
-            
+
             return buf;
         }
         public static byte[] GetVideoBuffer(byte[] body)
@@ -100,13 +100,45 @@ namespace Voip
             var sizes = Uint32ToBytes(body.Length);
             Array.Copy(sizes, 0, buf, 2, 4);
             Array.Copy(body, 0, buf, 6, body.Length);
-           
+
             return buf;
         }
         public static string GetBufferText(byte[] buf)
         {
             return string.Format("[{0}]", string.Join(" ", buf));
         }
+
+        public static List<byte[]> SplitH264Buffer(byte[] buf)
+        {
+            var list = new List<byte[]>();
+            var frameStart = 0;
+            var i = 4;
+
+            while (i < buf.Length - 4)
+            {
+                if (buf[i] == 0 && buf[i + 1] == 0 && buf[i + 2] == 0 && buf[i + 3] == 1)
+                {
+                    var body = new byte[i - frameStart];
+                    Array.Copy(buf, frameStart, body, 0, body.Length);
+                    list.Add(body);
+                    frameStart = i;
+                    i = i + 4; 
+                    continue;
+                }
+                if (buf[i] == 0 && buf[i + 1] == 0 && buf[i + 3] == 1)
+                {
+                    var body = new byte[i - frameStart];
+                    Array.Copy(buf, frameStart, body, 0, body.Length);
+                    list.Add(body);
+                    frameStart = i;
+                    i += 3; 
+                    continue;
+                }
+                i++;
+            }
+            return list;
+        }
+
 
         public static byte[] GetBitmapData(Bitmap frameBitmap)
         {

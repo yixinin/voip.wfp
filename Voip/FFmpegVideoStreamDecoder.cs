@@ -4,6 +4,7 @@ using System.Collections.Generic;
 using System.Drawing;
 using System.IO;
 using System.Runtime.InteropServices;
+using System.Threading.Tasks;
 
 namespace Voip
 {
@@ -15,6 +16,7 @@ namespace Voip
         private readonly AVFrame* _pFrame;
         private readonly AVFrame* _receivedFrame;
         private readonly AVPacket* _pPacket;
+
 
         public unsafe VideoStreamDecoder(AVHWDeviceType HWDeviceType = AVHWDeviceType.AV_HWDEVICE_TYPE_NONE)
         {
@@ -61,16 +63,22 @@ namespace Voip
         }
 
 
-        public unsafe Int32 PutVideoStream(byte[] buffer)
+        public unsafe Int32 PutVideoStream(byte[] buffer, int index)
         {
             AVPacket packet = new AVPacket();
+            packet.size = buffer.Length;//这个填入H264数据帧的大小  
+            packet.stream_index = index;
+
+
+
             fixed (byte* pBuffer = buffer)
             {
                 packet.data = pBuffer;    //这里填入一个指向完整H264数据帧的指针 
+
+                int ret = ffmpeg.avcodec_send_packet(_pCodecContext, &packet);
+                ffmpeg.av_packet_unref(_pPacket);
+                return ret;
             }
-            packet.size = buffer.Length;        //这个填入H264数据帧的大小  
-            int ret = ffmpeg.avcodec_send_packet(_pCodecContext, &packet);
-            return ret;
         }
         public bool TryDecodeNextFrame(out AVFrame frame)
         {
@@ -79,30 +87,16 @@ namespace Voip
             int error;
             do
             {
-                //try
-                //{
-                //    do
-                //    {
-                //        error = ffmpeg.av_read_frame(_pFormatContext, _pPacket);
-                //        if (error == ffmpeg.AVERROR_EOF)
-                //        {
-                //            frame = *_pFrame;
-                //            return false;
-                //        }
 
-                //        error.ThrowExceptionIfError();
-                //    } while (_pPacket->stream_index != _streamIndex);
-
-                //    ffmpeg.avcodec_send_packet(_pCodecContext, _pPacket).ThrowExceptionIfError();
-                //}
-                //finally
-                //{
-                //    ffmpeg.av_packet_unref(_pPacket);
-                //}
 
                 error = ffmpeg.avcodec_receive_frame(_pCodecContext, _pFrame);
             } while (error == ffmpeg.AVERROR(ffmpeg.EAGAIN));
             error.ThrowExceptionIfError();
+
+
+
+            ffmpeg.av_packet_unref(_pPacket);
+
             if (_pCodecContext->hw_device_ctx != null)
             {
                 if (FrameSize.Width == 0 && _pCodecContext->width != 0)
@@ -119,18 +113,41 @@ namespace Voip
             return true;
         }
 
-        //public IReadOnlyDictionary<string, string> GetContextInfo()
-        //{
-        //    AVDictionaryEntry* tag = null;
-        //    var result = new Dictionary<string, string>();
-        //    while ((tag = ffmpeg.av_dict_get(_pFormatContext->metadata, "", tag, ffmpeg.AV_DICT_IGNORE_SUFFIX)) != null)
-        //    {
-        //        var key = Marshal.PtrToStringAnsi((IntPtr)tag->key);
-        //        var value = Marshal.PtrToStringAnsi((IntPtr)tag->value);
-        //        result.Add(key, value);
-        //    }
+        public bool TryGetNextFrame(byte[] buffer, Int32 yuFormat)
+        {
+            if (ffmpeg.avcodec_receive_frame(_pCodecContext, _pFrame) == 0)
+            {
+                int height = _pCodecContext->height;
+                int width = _pCodecContext->width;
 
-        //    return result;
-        //}
+                if (yuFormat == 1)
+                {
+                    ////写入数据  
+                    int yLen = height * width;
+                    Marshal.Copy((IntPtr)_pFrame->data[0], buffer, 0, yLen);
+
+                    int uLen = yLen / 4;
+                    Marshal.Copy((IntPtr)_pFrame->data[1], buffer, yLen, uLen);
+
+                    int vLen = uLen;
+                    Marshal.Copy((IntPtr)_pFrame->data[2], buffer, yLen + uLen, vLen);
+                    return true;
+                }
+                else
+                {
+                    ////写入数据  
+                    int yLen = height * width;
+                    Marshal.Copy((IntPtr)_pFrame->data[0], buffer, 0, yLen);
+
+                    int uLen = yLen / 4;
+                    Marshal.Copy((IntPtr)_pFrame->data[2], buffer, yLen, uLen);
+
+                    int vLen = uLen;
+                    Marshal.Copy((IntPtr)_pFrame->data[1], buffer, yLen + uLen, vLen);
+                    return true;
+                }
+            }
+            return false;
+        }
     }
 }

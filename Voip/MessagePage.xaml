@@ -25,9 +25,9 @@
         <!--消息记录-->
         <Grid Grid.Row="1">
             <Image x:Name="videoImage" Width="320" Height="320"></Image>
-            <ListView x:Name="msgListView">
+            <!--<ListView x:Name="msgListView">
 
-            </ListView>
+            </ListView>-->
         </Grid>
         <!--输入框-->
         <Grid Grid.Row="2">
