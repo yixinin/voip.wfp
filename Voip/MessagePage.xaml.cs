@@ -1,5 +1,7 @@
-﻿using System;
+﻿using FFmpeg.AutoGen;
+using System;
 using System.Collections.Generic;
+using System.IO;
 using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
@@ -20,9 +22,11 @@ namespace Voip
     /// </summary>
     public partial class MessagePage : Page
     {
+        public static MessagePage Current { get; set; }
         public MessagePage()
         {
             InitializeComponent();
+            Current = this;
         }
 
         async private void callVideoBtn_Click(object sender, RoutedEventArgs e)
@@ -32,6 +36,8 @@ namespace Voip
             voipClient.CaptureAudio();
             voipClient.CaptureVideo();
 
+            videoImage.Source = new BitmapImage();
         }
+
     }
 }

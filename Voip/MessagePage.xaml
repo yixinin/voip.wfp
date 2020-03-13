@@ -24,8 +24,9 @@
         </Grid>
         <!--消息记录-->
         <Grid Grid.Row="1">
+            <Image x:Name="videoImage" Width="320" Height="320"></Image>
             <ListView x:Name="msgListView">
-                
+
             </ListView>
         </Grid>
         <!--输入框-->

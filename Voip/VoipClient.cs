@@ -1,7 +1,11 @@
-﻿using NAudio.Wave;
+﻿using FFmpeg.AutoGen;
+using NAudio.Wave;
+using OpenCvSharp;
 using System;
 using System.Collections.Generic;
 using System.Diagnostics;
+using System.Drawing;
+using System.IO;
 using System.Linq;
 using System.Net;
 using System.Net.Sockets;
@@ -80,6 +84,9 @@ namespace Voip
         const int TCP_BUFSIZE = 4096;
         const int HEADER_SIZE = 6;
 
+        public Queue<VideoPacket> videoQueue;
+        public Queue<AudioPacket> audioQueue;
+
         public VoipClient(string host, short port, string token, long roomId)
         {
             Host = host;
@@ -95,9 +102,10 @@ namespace Voip
 
             AudioBits = 16;
             AudioChannels = 1;
-            AudioRate = 48000;
-
-
+            AudioRate = 8000;
+            videoQueue = new Queue<VideoPacket>();
+            audioQueue = new Queue<AudioPacket>();
+            FFmpegBinariesHelper.RegisterFFmpegBinaries();
         }
 
         public VoipClient()
@@ -109,7 +117,10 @@ namespace Voip
 
             AudioBits = 16;
             AudioChannels = 1;
-            AudioRate = 48000;
+            AudioRate = 8000;
+            videoQueue = new Queue<VideoPacket>();
+            audioQueue = new Queue<AudioPacket>();
+            FFmpegBinariesHelper.RegisterFFmpegBinaries();
         }
 
         public void Connect(string p)
@@ -241,6 +252,8 @@ namespace Voip
                 return;
             }
 
+
+
             this._videoCapture = new OpenCvSharp.VideoCapture(0);
             _videoCapture.Fps = Fps;
             _videoCapture.FrameWidth = Width;
@@ -250,6 +263,7 @@ namespace Voip
             videoTokenSource = new CancellationTokenSource();
             var ct = videoTokenSource.Token;
             _videoOn = true;
+            Task.Run(handleVideoQueue);
             Task.Run(() =>
              {
                  ReadVideoFrame(ct);
@@ -266,6 +280,7 @@ namespace Voip
                     ct.ThrowIfCancellationRequested();
 
                     var mat = new OpenCvSharp.Mat();
+
                     var ok = this._videoCapture.Read(mat);
                     if (!ok)
                     {
@@ -274,13 +289,8 @@ namespace Voip
                         _videoCapture.Dispose();
                         return;
                     }
-                    if (_socketConn != null && _socketConn.Connected)
-                    {
-                        //视频转换
-                        var buf = Util.GetVideoBuffer(mat.ToBytes());
-                         
-                        
-                    }
+
+                    videoQueue.Enqueue(new VideoPacket(mat.ImEncode(".jpg")));
                 }
                 catch (Exception ex)
                 {
@@ -293,6 +303,57 @@ namespace Voip
             }
 
         }
+
+        private unsafe void EncodeVideo(VideoPacket[] ps, MemoryStream fs)
+        {
+            var sourceSize = new System.Drawing.Size(Height, Width);
+            var sourcePixelFormat = AVPixelFormat.AV_PIX_FMT_BGR24;
+            var destinationSize = sourceSize;
+            var destinationPixelFormat = AVPixelFormat.AV_PIX_FMT_YUV420P;
+            using (var vfc = new VideoFrameConverter(sourceSize, sourcePixelFormat, destinationSize, destinationPixelFormat))
+            {
+                using (var vse = new H264VideoStreamEncoder(fs, Fps, destinationSize))
+                {
+                    var frameNumber = 0;
+                    //读取
+                    foreach (var p in ps)
+                    {
+                        byte[] bitmapData;
+                        using (var ms = new MemoryStream(p.Data))
+                        {
+                            using (var frameImage = Image.FromStream(ms))
+                            {
+                                using (var frameBitmap = frameImage is Bitmap bitmap ? bitmap : new Bitmap(frameImage))
+                                {
+                                    bitmapData = Util.GetBitmapData(frameBitmap);
+                                }
+                            }
+                        }
+
+
+                        fixed (byte* pBitmapData = bitmapData)
+                        {
+                            var data = new byte_ptrArray8 { [0] = pBitmapData };
+                            var linesize = new int_array8 { [0] = bitmapData.Length / sourceSize.Height };
+                            var frame = new AVFrame
+                            {
+                                data = data,
+                                linesize = linesize,
+                                height = sourceSize.Height
+                            };
+                            var convertedFrame = vfc.Convert(frame);
+                            convertedFrame.pts = frameNumber * Fps;
+                            vse.Encode(convertedFrame);
+                        }
+
+                        //Console.WriteLine($"frame: {frameNumber}");
+                        frameNumber++;
+
+                    }
+                }
+            }
+        }
+
 
         //关闭摄像头
         public void StopCaptureVideo()
@@ -340,18 +401,15 @@ namespace Voip
             _audioCapture.RecordingStopped += _audioCapture_RecordingStopped;
 
 
-            //if (_audioCapture.DeviceNumber == 0)
-            //{
-            //    Debug.WriteLine("no audio device available");
-            //}
+
             _audioCapture.StartRecording();
             _audioOn = true;
+            Task.Run(handleAudioQueue);
         }
 
         private void _audioCapture_DataAvailable(object sender, WaveInEventArgs e)
         {
-            var buf = Util.GetAudioBuffer(e.Buffer);
-            SendBuffer(buf);
+            audioQueue.Enqueue(new AudioPacket(e.Buffer));
         }
 
         private void _audioCapture_RecordingStopped(object sender, StoppedEventArgs e)
@@ -372,9 +430,94 @@ namespace Voip
         }
 
 
+        private void handleAudioQueue()
+        {
+            while (AudioOn)
+            {
+                var total = 10;
+                var bodySize = 0;
+                var ps = new AudioPacket[total];
+                for (var i = 0; i < total; i++)
+                {
+                    while (audioQueue.Count <= 0)
+                    {
+                        Task.Delay(1).ContinueWith(_ =>
+                        {
+
+                        });
+                    }
+                    var p = audioQueue.Dequeue();
+                    ps[i] = p;
+                    bodySize += p.Data.Length;
+                }
 
 
+                //每秒发送一个包
+                var body = new byte[bodySize];
+                var writed = 0;
+                foreach (var p in ps)
+                {
+                    Array.Copy(p.Data, 0, body, writed, p.Data.Length);
+                    writed += p.Data.Length;
+                }
+                var buf = Util.GetAudioBuffer(body);
+                var n = _socketConn.Send(buf);
+                if (n != buf.Length)
+                {
+                    Debug.WriteLine(string.Format("error: audio buf send, n={0}, bodySize={1}", n, bodySize));
+                }
+                Debug.WriteLine(string.Format("audio samples:{0}, size:{1}", ps.Length, buf.Length));
+            }
+        }
 
+        private void handleVideoQueue()
+        {
+            while (VideoOn)
+            { 
+                var total = Fps;
+                var bodySize = 0;
+                var ps = new VideoPacket[total];
+                for (var i = 0; i < total; i++)
+                {
+                    while (videoQueue.Count <= 0)
+                    {
+                        Task.Delay(1).ContinueWith(_ =>
+                        {
+
+                        });
+                    }
+                    var p = videoQueue.Dequeue();
+                    ps[i] = p;
+                    bodySize += p.Data.Length;
+                }
+
+                //转码
+                using (var fs = new MemoryStream()) //存储转码后的buffer
+                {
+                    EncodeVideo(ps, fs);
+
+                    var body = new byte[fs.Length];
+                    fs.Seek(0, SeekOrigin.Begin);
+                    var read = 0;
+
+                    while (read < fs.Length)
+                    {
+                        var sub = new byte[fs.Length - read];
+                        var msn = fs.Read(sub, 0, sub.Length);
+                        Array.Copy(sub, 0, body, read, msn);
+                        read += msn;
+                    }
+                    var buf = Util.GetVideoBuffer(body);
+                    var n = _socketConn.Send(buf);
+                    if (n != buf.Length)
+                    {
+                        Debug.WriteLine(string.Format("error: video buf send, n={0}, bodySize={1}", n, buf.Length));
+                    }
+                    Debug.WriteLine(string.Format("video frames:{0}, size:{1}", ps.Length, buf.Length));
+                }
+
+            }
+        }
         private void Recv(CancellationToken ct)
         {
             while (true)
@@ -467,5 +610,7 @@ namespace Voip
             }
             Debug.WriteLine("socket is not connected");
         }
+
+
     }
 }

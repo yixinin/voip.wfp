@@ -85,14 +85,9 @@ namespace Voip
 
         private static unsafe void DecodeAllFramesToImages(AVHWDeviceType HWDevice)
         {
-            // decode all frames from url, please not it might local resorce, e.g. string url = "../../sample_mpeg4.mp4";
-            var url = "http://clips.vorwaerts-gmbh.de/big_buck_bunny.mp4"; // be advised this file holds 1440 frames
-            using (var vsd = new VideoStreamDecoder(url,HWDevice))
+            using (var vsd = new VideoStreamDecoder(HWDevice))
             {
                 Console.WriteLine($"codec name: {vsd.CodecName}");
-
-                var info = vsd.GetContextInfo();
-                info.ToList().ForEach(x => Console.WriteLine($"{x.Key} = {x.Value}"));
 
                 var sourceSize = vsd.FrameSize;
                 var sourcePixelFormat = HWDevice == AVHWDeviceType.AV_HWDEVICE_TYPE_NONE ? vsd.PixelFormat : GetHWPixelFormat(HWDevice);
@@ -200,7 +195,7 @@ namespace Voip
             }
         }
 
-        private static byte[] GetBitmapData(Bitmap frameBitmap)
+        public static byte[] GetBitmapData(Bitmap frameBitmap)
         {
             var bitmapData = frameBitmap.LockBits(new Rectangle(Point.Empty, frameBitmap.Size), ImageLockMode.ReadOnly, PixelFormat.Format24bppRgb);
             try
