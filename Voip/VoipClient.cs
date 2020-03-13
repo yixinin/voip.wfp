@@ -106,6 +106,7 @@ namespace Voip
             videoQueue = new Queue<VideoPacket>();
             audioQueue = new Queue<AudioPacket>();
             FFmpegBinariesHelper.RegisterFFmpegBinaries();
+
         }
 
         public VoipClient()
@@ -295,7 +296,7 @@ namespace Voip
                         return;
                     }
 
-                    videoQueue.Enqueue(new VideoPacket(mat.ToBytes()));
+                    videoQueue.Enqueue(new VideoPacket(mat));
                 }
                 catch (Exception ex)
                 {
@@ -488,18 +489,7 @@ namespace Voip
                     //读取
                     foreach (var p in ps)
                     {
-                        byte[] bitmapData;
-                        using (var ms = new MemoryStream(p.Data))
-                        {
-                            using (var frameImage = Image.FromStream(ms))
-                            {
-                                using (var frameBitmap = frameImage is Bitmap bitmap ? bitmap : new Bitmap(frameImage))
-                                {
-                                    bitmapData = Util.GetBitmapData(frameBitmap);
-                                }
-                            }
-                        }
-
+                        byte[] bitmapData = Util.GetBitmapData(p.Bmp);
 
                         fixed (byte* pBitmapData = bitmapData)
                         {
@@ -543,7 +533,7 @@ namespace Voip
                         n += n1;
                     }
 
-                    Debug.WriteLine(Util.GetBufferText(header));
+                    //Debug.WriteLine(Util.GetBufferText(header));
                     if (header[0] != 2 || header[1] > 2)
                     {
                         Debug.WriteLine("header error");

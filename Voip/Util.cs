@@ -159,7 +159,7 @@ namespace Voip
         {
             HWtype = AVHWDeviceType.AV_HWDEVICE_TYPE_NONE;
             Console.WriteLine("Use hardware acceleration for decoding?[n]");
-            var key = Console.ReadLine();
+            var key = "y";
             var availableHWDecoders = new Dictionary<int, AVHWDeviceType>();
             if (key == "y")
             {
@@ -181,7 +181,7 @@ namespace Voip
                 if (decoderNumber == 0)
                     decoderNumber = availableHWDecoders.First().Key;
                 Console.WriteLine($"Selected [{decoderNumber}]");
-                int.TryParse(Console.ReadLine(), out var inputDecoderNumber);
+                var inputDecoderNumber = 1;
                 availableHWDecoders.TryGetValue(inputDecoderNumber == 0 ? decoderNumber : inputDecoderNumber, out HWtype);
             }
         }

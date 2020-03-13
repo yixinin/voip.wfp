@@ -33,7 +33,11 @@ namespace Voip
 
             CodecName = ffmpeg.avcodec_get_name(codec->id);
             FrameSize = new Size(_pCodecContext->width, _pCodecContext->height);
-            //PixelFormat = _pCodecContext->pix_fmt;
+            PixelFormat = _pCodecContext->pix_fmt;
+            if (PixelFormat == AVPixelFormat.AV_PIX_FMT_NONE)
+            {
+                PixelFormat = AVPixelFormat.AV_PIX_FMT_YUV420P;
+            }
 
             _pPacket = ffmpeg.av_packet_alloc();
             _pFrame = ffmpeg.av_frame_alloc();
@@ -43,10 +47,11 @@ namespace Voip
         public Size FrameSize { get; set; }
         public AVPixelFormat PixelFormat
         {
-            get
-            {
-                return AVPixelFormat.AV_PIX_FMT_YUV420P;
-            }
+            get;
+            //{
+            //    //return AVPixelFormat.AV_PIX_FMT_YUV420P;
+            //    ;
+            //}
         }
 
         public void Dispose()
@@ -65,20 +70,23 @@ namespace Voip
 
         public unsafe Int32 PutVideoStream(byte[] buffer, int index)
         {
-            AVPacket packet = new AVPacket();
-            packet.size = buffer.Length;//这个填入H264数据帧的大小  
-            packet.stream_index = index;
-            packet.pts = index * 24;
+            AVPacket pkt = new AVPacket();
+            var packet = &pkt;
+            ffmpeg.av_init_packet(packet);
+
+            packet->size = buffer.Length;//这个填入H264数据帧的大小  
+            packet->stream_index = index;
+            packet->pts = index * 24;
 
 
 
 
             fixed (byte* pBuffer = buffer)
             {
-                packet.data = pBuffer;    //这里填入一个指向完整H264数据帧的指针 
+                packet->data = pBuffer;    //这里填入一个指向完整H264数据帧的指针 
 
-                int ret = ffmpeg.avcodec_send_packet(_pCodecContext, &packet);
-                ffmpeg.av_packet_unref(_pPacket);
+
+                int ret = ffmpeg.avcodec_send_packet(_pCodecContext, packet);
                 return ret;
             }
         }
@@ -87,17 +95,23 @@ namespace Voip
             ffmpeg.av_frame_unref(_pFrame);
             ffmpeg.av_frame_unref(_receivedFrame);
             int error;
+            //if (buf != null)
+            //{
+            //    PutVideoStream(buf, index);
+            //}
+
             do
             {
-
-
                 error = ffmpeg.avcodec_receive_frame(_pCodecContext, _pFrame);
             } while (error == ffmpeg.AVERROR(ffmpeg.EAGAIN));
+            //error = ffmpeg.avcodec_receive_frame(_pCodecContext, _pFrame);
+            //if (error == ffmpeg.AVERROR(ffmpeg.EAGAIN))
+            //{
+            //    frame = new AVFrame();
+            //    return false;
+            //}
+
             error.ThrowExceptionIfError();
-
-
-
-            ffmpeg.av_packet_unref(_pPacket);
 
             if (_pCodecContext->hw_device_ctx != null)
             {

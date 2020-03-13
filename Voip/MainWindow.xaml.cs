@@ -40,7 +40,7 @@ namespace Voip
         const string WsAddr = "ws://localhost:9902/live";
         const string PROTOCOL = "tcp";
 
-        const string TOKEN = "00000000000000000000000000000001";
+        const string TOKEN = "00000000000000000000000000000000";
         const long ROOM_ID = 10240;
 
         public VoipClient VoipClient;
@@ -91,8 +91,9 @@ namespace Voip
 
         public unsafe void DecodeVideo(byte[] buffer)
         {
+            ffmpeg.avcodec_register_all();
             Util.ConfigureHWDecoder(out var HWDevice);
-            var vd = new VideoStreamDecoder(HWDevice);
+            using (var vd = new VideoStreamDecoder(HWDevice))
             {
                 var bufList = Util.SplitH264Buffer(buffer);
                 vd.FrameSize = new System.Drawing.Size(320, 320);
@@ -108,15 +109,30 @@ namespace Voip
                 using (var vfc = new VideoFrameConverter(sourceSize, sourcePixelFormat, destinationSize, destinationPixelFormat))
                 {
                     var frameNumber = 0;
-                    while (vd.TryDecodeNextFrame(out var frame))
+                    
+
+                    while (vd.TryDecodeNextFrame( out var frame))
                     {
-                        Debug.WriteLine("new frame");
+                        //if (index < bufList.Count)
+                        //{
+                        //    buf = bufList[index];
+                        //}
+                        //AVFrame frame;
+                        //while (true)
+                        //{
+                        //    var b = ;
+                        //    if (b)
+                        //    {
+                        //        break;
+                        //    }
+                        //    index++;
+                        //}
+                        Debug.WriteLine(string.Format("total frame: {0}, frame {1}", bufList.Count, frameNumber));
                         var convertedFrame = vfc.Convert(frame);
                         convertedFrame.channels = 4;
 
                         ConvertBitmap(convertedFrame, frameNumber);
-                        frameNumber++;
-
+                        frameNumber++; 
                     }
                 }
             }
@@ -135,7 +151,7 @@ namespace Voip
                             System.Drawing.Imaging.PixelFormat.Format24bppRgb,
                             (IntPtr)convertedFrame.data[0]))
             {
-                ShowBitmap(bitmap);
+                ShowBitmap(bitmap, frameNumber);
 
             }
         }
@@ -148,7 +164,7 @@ namespace Voip
         }
 
 
-        private void ShowBitmap(Bitmap bitmap)
+        private void ShowBitmap(Bitmap bitmap, int i)
         {
             using (MemoryStream stream = new MemoryStream())
             {
