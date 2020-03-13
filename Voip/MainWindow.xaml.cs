@@ -57,26 +57,34 @@ namespace Voip
             VoipClient = new VoipClient(HOST, TCP_PORT, TOKEN, ROOM_ID);
             VoipClient.AudioBufferRecieved += VoipClient_AudioBufferRecieved;
             VoipClient.VideoBufferRecieved += VoipClient_VideoBufferRecieved;
-            audioPlayer = new WaveOut();
-
-
-            var blockAlign = VoipClient.AudioChannels * (VoipClient.AudioBits / 8);
-            int averageBytesPerSecond = VoipClient.AudioRate * blockAlign;
-
-
-            var waveFormat = WaveFormat.CreateCustomFormat(
-                WaveFormatEncoding.Pcm,
-                VoipClient.AudioRate,
-                VoipClient.AudioChannels,
-                averageBytesPerSecond,
-                blockAlign,
-               VoipClient.AudioBits);
-            audioProvider = new BufferedWaveProvider(waveFormat);
-            audioProvider.DiscardOnBufferOverflow = true;
-            audioPlayer.Init(audioProvider);
-            audioPlayer.Play();
+            PlayAudio();
             Current = this;
             Task.Run(DecodeVideo);
+        }
+
+        public void PlayAudio()
+        {
+            try
+            {
+                audioPlayer = new WaveOut();
+                var blockAlign = VoipClient.AudioChannels * (VoipClient.AudioBits / 8);
+                int averageBytesPerSecond = VoipClient.AudioRate * blockAlign;
+                var waveFormat = WaveFormat.CreateCustomFormat(
+                    WaveFormatEncoding.Pcm,
+                    VoipClient.AudioRate,
+                    VoipClient.AudioChannels,
+                    averageBytesPerSecond,
+                    blockAlign,
+                   VoipClient.AudioBits);
+                audioProvider = new BufferedWaveProvider(waveFormat);
+                audioProvider.DiscardOnBufferOverflow = true;
+                audioPlayer.Init(audioProvider);
+                audioPlayer.Play();
+            }
+            catch (Exception ex)
+            {
+                Debug.WriteLine("play audio ex:", ex);
+            }
         }
 
         public unsafe void DecodeVideo()

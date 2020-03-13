@@ -252,22 +252,27 @@ namespace Voip
                 return;
             }
 
+            try
+            {
+                this._videoCapture = new OpenCvSharp.VideoCapture(0);
+                _videoCapture.Fps = Fps;
+                _videoCapture.FrameWidth = Width;
+                _videoCapture.FrameHeight = Height;
+                _videoCapture.AutoFocus = AutoFocus;
 
-
-            this._videoCapture = new OpenCvSharp.VideoCapture(0);
-            _videoCapture.Fps = Fps;
-            _videoCapture.FrameWidth = Width;
-            _videoCapture.FrameHeight = Height;
-            _videoCapture.AutoFocus = AutoFocus;
-
-            videoTokenSource = new CancellationTokenSource();
-            var ct = videoTokenSource.Token;
-            _videoOn = true;
-            Task.Run(handleVideoQueue);
-            Task.Run(() =>
-             {
-                 ReadVideoFrame(ct);
-             });
+                videoTokenSource = new CancellationTokenSource();
+                var ct = videoTokenSource.Token;
+                _videoOn = true;
+                Task.Run(handleVideoQueue);
+                Task.Run(() =>
+                {
+                    ReadVideoFrame(ct);
+                });
+            }
+            catch (Exception ex)
+            {
+                Debug.WriteLine("open camera ex:", ex);
+            }
         }
 
         private void ReadVideoFrame(CancellationToken ct)
@@ -381,30 +386,33 @@ namespace Voip
                 Debug.WriteLine("CaptureAudio no socket connection available");
                 return;
             }
+            try
+            {
+                this._audioCapture = new WaveIn();
+                //var waveFormat = new WaveFormat(AudioRate, AudioBits, AudioChannels);
+                var blockAlign = AudioChannels * (AudioBits / 8);
+                int averageBytesPerSecond = AudioRate * blockAlign;
 
-            this._audioCapture = new WaveIn();
-            //var waveFormat = new WaveFormat(AudioRate, AudioBits, AudioChannels);
-            var blockAlign = AudioChannels * (AudioBits / 8);
-            int averageBytesPerSecond = AudioRate * blockAlign;
+                var waveFormat = WaveFormat.CreateCustomFormat(
+                    WaveFormatEncoding.Pcm,
+                    AudioRate,
+                    AudioChannels,
+                    averageBytesPerSecond,
+                    blockAlign,
+                    AudioBits);
 
-            var waveFormat = WaveFormat.CreateCustomFormat(
-                WaveFormatEncoding.Pcm,
-                AudioRate,
-                AudioChannels,
-                averageBytesPerSecond,
-                blockAlign,
-                AudioBits);
+                this._audioCapture.WaveFormat = waveFormat;
+                _audioCapture.DataAvailable += _audioCapture_DataAvailable;
+                _audioCapture.RecordingStopped += _audioCapture_RecordingStopped;
 
-
-            this._audioCapture.WaveFormat = waveFormat;
-            _audioCapture.DataAvailable += _audioCapture_DataAvailable;
-            _audioCapture.RecordingStopped += _audioCapture_RecordingStopped;
-
-
-
-            _audioCapture.StartRecording();
-            _audioOn = true;
-            Task.Run(handleAudioQueue);
+                _audioCapture.StartRecording();
+                _audioOn = true;
+                Task.Run(handleAudioQueue);
+            }
+            catch (Exception ex)
+            {
+                Debug.WriteLine("open microphone ex:", ex);
+            }
         }
 
         private void _audioCapture_DataAvailable(object sender, WaveInEventArgs e)
@@ -473,7 +481,7 @@ namespace Voip
         private void handleVideoQueue()
         {
             while (VideoOn)
-            { 
+            {
                 var total = Fps;
                 var bodySize = 0;
                 var ps = new VideoPacket[total];
