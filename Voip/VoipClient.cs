@@ -102,7 +102,7 @@ namespace Voip
 
             AudioBits = 16;
             AudioChannels = 1;
-            AudioRate = 8000;
+            AudioRate = 32000;
             videoQueue = new Queue<VideoPacket>();
             audioQueue = new Queue<AudioPacket>();
             FFmpegBinariesHelper.RegisterFFmpegBinaries();

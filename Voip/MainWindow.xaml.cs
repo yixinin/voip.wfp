@@ -40,7 +40,7 @@ namespace Voip
         const string WsAddr = "ws://localhost:9902/live";
         const string PROTOCOL = "tcp";
 
-        const string TOKEN = "00000000000000000000000000000000";
+        const string TOKEN = "00000000000000000000000000000001";
         const long ROOM_ID = 10240;
 
         public VoipClient VoipClient;
