@@ -152,7 +152,7 @@ namespace Voip
         {
             using (MemoryStream stream = new MemoryStream())
             {
-                bitmap.Save(stream, ImageFormat.Jpeg); // 坑点：格式选Bmp时，不带透明度
+                bitmap.Save(stream, ImageFormat.Png); // 坑点：格式选Bmp时，不带透明度
 
 
 

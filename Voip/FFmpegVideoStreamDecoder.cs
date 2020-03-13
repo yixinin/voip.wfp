@@ -68,6 +68,8 @@ namespace Voip
             AVPacket packet = new AVPacket();
             packet.size = buffer.Length;//这个填入H264数据帧的大小  
             packet.stream_index = index;
+            packet.pts = index * 24;
+
 
 
 
