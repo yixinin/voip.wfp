@@ -11,40 +11,41 @@ namespace Voip
     {
         private readonly AVCodecContext* _pCodecContext;
         //private readonly AVFormatContext* _pFormatContext;
-        private readonly int _streamIndex;
+        //private readonly int _streamIndex;
         private readonly AVFrame* _pFrame;
         private readonly AVFrame* _receivedFrame;
         private readonly AVPacket* _pPacket;
 
-        public VideoStreamDecoder(AVHWDeviceType HWDeviceType = AVHWDeviceType.AV_HWDEVICE_TYPE_NONE)
+        public unsafe VideoStreamDecoder(AVHWDeviceType HWDeviceType = AVHWDeviceType.AV_HWDEVICE_TYPE_NONE)
         {
-            //_pFormatContext = ffmpeg.avformat_alloc_context();
-            _receivedFrame = ffmpeg.av_frame_alloc();
-            //var pFormatContext = _pFormatContext;
-            //ffmpeg.avformat_open_input(&pFormatContext, url, null, null).ThrowExceptionIfError();
+            _pCodecContext = ffmpeg.avcodec_alloc_context3(null);
+            AVCodec* codec = ffmpeg.avcodec_find_decoder(AVCodecID.AV_CODEC_ID_H264);
 
-            //ffmpeg.avformat_find_stream_info(_pFormatContext, null).ThrowExceptionIfError();
-            AVCodec* codec = null;
-            //_streamIndex = ffmpeg.av_find_best_stream(_pFormatContext, AVMediaType.AVMEDIA_TYPE_VIDEO, -1, -1, &codec, 0).ThrowExceptionIfError();
-            _pCodecContext = ffmpeg.avcodec_alloc_context3(codec);
             if (HWDeviceType != AVHWDeviceType.AV_HWDEVICE_TYPE_NONE)
             {
                 ffmpeg.av_hwdevice_ctx_create(&_pCodecContext->hw_device_ctx, HWDeviceType, null, null, 0).ThrowExceptionIfError();
             }
-            //ffmpeg.avcodec_parameters_to_context(_pCodecContext, _pFormatContext->streams[_streamIndex]->codecpar).ThrowExceptionIfError();
-            ffmpeg.avcodec_open2(_pCodecContext, codec, null).ThrowExceptionIfError();
+
+            if (ffmpeg.avcodec_open2(_pCodecContext, codec, null) >= 0)
+                _receivedFrame = ffmpeg.av_frame_alloc();
 
             CodecName = ffmpeg.avcodec_get_name(codec->id);
             FrameSize = new Size(_pCodecContext->width, _pCodecContext->height);
-            PixelFormat = _pCodecContext->pix_fmt;
+            //PixelFormat = _pCodecContext->pix_fmt;
 
             _pPacket = ffmpeg.av_packet_alloc();
             _pFrame = ffmpeg.av_frame_alloc();
         }
 
         public string CodecName { get; }
-        public Size FrameSize { get; }
-        public AVPixelFormat PixelFormat { get; }
+        public Size FrameSize { get; set; }
+        public AVPixelFormat PixelFormat
+        {
+            get
+            {
+                return AVPixelFormat.AV_PIX_FMT_YUV420P;
+            }
+        }
 
         public void Dispose()
         {
@@ -104,6 +105,10 @@ namespace Voip
             error.ThrowExceptionIfError();
             if (_pCodecContext->hw_device_ctx != null)
             {
+                if (FrameSize.Width == 0 && _pCodecContext->width != 0)
+                {
+                    FrameSize = new Size(_pCodecContext->width, _pCodecContext->height);
+                }
                 ffmpeg.av_hwframe_transfer_data(_receivedFrame, _pFrame, 0).ThrowExceptionIfError();
                 frame = *_receivedFrame;
             }

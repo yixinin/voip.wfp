@@ -76,23 +76,28 @@ namespace Voip
             audioPlayer.Init(audioProvider);
             audioPlayer.Play();
             Current = this;
+            Task.Run(DecodeVideo);
         }
 
         public unsafe void DecodeVideo()
         {
             Util.ConfigureHWDecoder(out var HWDevice);
-            using (var vsd = new VideoStreamDecoder(HWDevice))
+            VideoDecoder = new VideoStreamDecoder(HWDevice);
             {
-                Console.WriteLine($"codec name: {vsd.CodecName}");
-
-                var sourceSize = vsd.FrameSize;
-                var sourcePixelFormat = HWDevice == AVHWDeviceType.AV_HWDEVICE_TYPE_NONE ? vsd.PixelFormat : Util.GetHWPixelFormat(HWDevice);
+                VideoDecoder.FrameSize = new System.Drawing.Size(320, 320);
+                while (VideoDecoder.FrameSize.Width == 0)
+                {
+                    VideoDecoder.TryDecodeNextFrame(out var fm);
+                }
+                //获取到第一帧再开始解码
+                var sourceSize = VideoDecoder.FrameSize;
+                var sourcePixelFormat = HWDevice == AVHWDeviceType.AV_HWDEVICE_TYPE_NONE ? VideoDecoder.PixelFormat : Util.GetHWPixelFormat(HWDevice);
                 var destinationSize = sourceSize;
                 var destinationPixelFormat = AVPixelFormat.AV_PIX_FMT_BGR24;
                 using (var vfc = new VideoFrameConverter(sourceSize, sourcePixelFormat, destinationSize, destinationPixelFormat))
                 {
                     var frameNumber = 0;
-                    while (vsd.TryDecodeNextFrame(out var frame))
+                    while (VideoDecoder.TryDecodeNextFrame(out var frame))
                     {
                         var convertedFrame = vfc.Convert(frame);
 
@@ -112,7 +117,11 @@ namespace Voip
                                 bmp.StreamSource = stream;
                                 bmp.EndInit();
                                 bmp.Freeze();
-                                MessagePage.Current.videoImage.Source = bmp;
+                                MessagePage.Current.Dispatcher.BeginInvoke(System.Windows.Threading.DispatcherPriority.Normal, new Action(() =>
+                                {
+                                    MessagePage.Current.videoImage.Source = bmp;
+
+                                }));
                             }
 
                         }
