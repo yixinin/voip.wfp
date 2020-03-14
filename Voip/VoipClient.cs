@@ -43,7 +43,7 @@ namespace Voip
         public int AudioChannels { get; set; }
 
 
-        public event EventHandler<MediaBufferArgs> VideoBufferRecieved;
+        //public event EventHandler<MediaBufferArgs> VideoBufferRecieved;
         public event EventHandler<MediaBufferArgs> AudioBufferRecieved;
 
         public string Host { get; set; }
@@ -80,6 +80,19 @@ namespace Voip
 
         public string Token { get; set; }
         public long RoomId { get; set; }
+        public bool IsConnect
+        {
+            get
+            {
+                if (_socketConn == null)
+                {
+                    return false;
+                }
+                return _socketConn.Connected;
+            }
+        }
+
+        public bool hasPPS;
 
         const int TCP_BUFSIZE = 4096;
         const int HEADER_SIZE = 6;
@@ -89,15 +102,19 @@ namespace Voip
 
         public Queue<byte[]> videoPacketQueue;
 
-        public VoipClient(string host, short port, string token, long roomId)
+        public Queue<VideoH264Packet> VideoH264Queue { get; set; }
+
+        public VoipClient(Queue<VideoH264Packet> q, string host, short port, string token, long roomId, int fps = 24)
         {
             Host = host;
             Port = port;
             RoomId = roomId;
             Token = token;
 
+            VideoH264Queue = q;
 
-            Fps = 24;
+
+            Fps = fps;
             Width = 320;
             Height = 320;
             AutoFocus = true;
@@ -402,7 +419,7 @@ namespace Voip
         {
             while (AudioOn)
             {
-                var total = 10;
+                var total = 5;
                 var bodySize = 0;
                 var ps = new AudioPacket[total];
                 for (var i = 0; i < total; i++)
@@ -611,9 +628,19 @@ namespace Voip
                             convertedFrame.pts = frameNumber * Fps;
                             using (var ms = new MemoryStream())
                             {
-                                var buf = vse.Encode(convertedFrame, ms);
+                                vse.Encode(convertedFrame, ms);
                                 //发送到buffer队列
-                                videoPacketQueue.Enqueue(buf);
+                                var body = new byte[ms.Length];
+                                var bodySize = body.Length;
+                                var read = 0;
+                                while (read < bodySize)
+                                {
+                                    var sub = new byte[bodySize - read];
+                                    var n = ms.Read(sub, 0, sub.Length);
+                                    Array.Copy(sub, 0, body, read, n);
+                                    read += n;
+                                }
+                                videoPacketQueue.Enqueue(body);
                             }
 
                         }
@@ -684,7 +711,18 @@ namespace Voip
                             break;
                         case 2:
                             //video
-                            VideoBufferRecieved?.Invoke(this, new MediaBufferArgs(body));
+                            var list = Util.SplitH264Buffer(body);
+
+                            foreach (var buf in list)
+                            {
+                                var p = new VideoH264Packet(buf);
+                                if (p.IsPPS || hasPPS)
+                                {
+                                    hasPPS = true;
+                                    VideoH264Queue.Enqueue(p);
+                                }
+
+                            }
                             break;
                         default:
                             Debug.WriteLine("unknown buf header", header);

@@ -49,7 +49,7 @@ namespace Voip
             ffmpeg.av_free(_pCodec);
         }
 
-        public byte[] Encode(AVFrame frame, Stream stream)
+        public void Encode(AVFrame frame, Stream stream)
         {
             if (frame.format != (int)_pCodecContext->pix_fmt) throw new ArgumentException("Invalid pixel format.", nameof(frame));
             if (frame.width != _frameSize.Width) throw new ArgumentException("Invalid width.", nameof(frame));
@@ -76,9 +76,6 @@ namespace Voip
                 using (var packetStream = new UnmanagedMemoryStream(pPacket->data, pPacket->size))
                 {
                     packetStream.CopyTo(stream);
-
-                    var buf = new byte[stream.Length];
-                    return buf;
                 }
 
 
@@ -87,7 +84,6 @@ namespace Voip
             {
                 ffmpeg.av_packet_unref(pPacket);
             }
-            return null;
         }
     }
 }

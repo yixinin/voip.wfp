@@ -9,6 +9,29 @@ using System.Threading.Tasks;
 
 namespace Voip
 {
+
+    public class VideoH264Packet
+    {
+        public byte[] Buffer { get; set; }
+        private bool _ispps;
+        public bool IsPPS
+        {
+            get
+            {
+                return _ispps;
+            }
+        }
+        public VideoH264Packet(byte[] buf)
+        {
+            Buffer = buf;
+            if (buf != null && buf.Length > 4 && buf[4] == 103)
+            {
+                _ispps = true;
+            }
+        }
+    }
+
+
     public class VideoPacket
     {
         public Bitmap Bmp { get; set; }

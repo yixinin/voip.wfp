@@ -23,9 +23,9 @@ namespace Voip
                 sourceSize.Height,
                 sourcePixelFormat,
                 destinationSize.Width,
-                destinationSize.Height, 
+                destinationSize.Height,
                 destinationPixelFormat,
-                ffmpeg.SWS_FAST_BILINEAR, 
+                ffmpeg.SWS_FAST_BILINEAR,
                 null, null, null);
             if (_pConvertContext == null) throw new ApplicationException("Could not initialize the conversion context.");
 
@@ -44,7 +44,7 @@ namespace Voip
         }
 
         public AVFrame Convert(AVFrame sourceFrame)
-        {
+        { 
             ffmpeg.sws_scale(_pConvertContext, sourceFrame.data, sourceFrame.linesize, 0, sourceFrame.height, _dstData, _dstLinesize);
 
             var data = new byte_ptrArray8();

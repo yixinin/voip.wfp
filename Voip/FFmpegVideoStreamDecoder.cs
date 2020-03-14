@@ -14,23 +14,34 @@ namespace Voip
         private readonly AVCodecContext* _pCodecContext;
         //private readonly AVFormatContext* _pFormatContext;
         //private readonly int _streamIndex;
-        private readonly AVFrame* _pFrame;
-        private readonly AVFrame* _receivedFrame;
-        private readonly AVPacket* _pPacket;
+        //private readonly AVFrame* _pFrame;
+        //private readonly AVFrame* _receivedFrame;
+        //private readonly AVPacket* _pPacket;
+
+        public Queue<VideoH264Packet> videoQueue { get; set; }
 
 
-        public unsafe VideoStreamDecoder(AVHWDeviceType HWDeviceType = AVHWDeviceType.AV_HWDEVICE_TYPE_NONE)
+        public unsafe VideoStreamDecoder(Queue<VideoH264Packet> q, AVHWDeviceType HWDeviceType = AVHWDeviceType.AV_HWDEVICE_TYPE_NONE)
         {
-            _pCodecContext = ffmpeg.avcodec_alloc_context3(null);
+            videoQueue = q;
+
             AVCodec* codec = ffmpeg.avcodec_find_decoder(AVCodecID.AV_CODEC_ID_H264);
+
+            _pCodecContext = ffmpeg.avcodec_alloc_context3(codec);
 
             if (HWDeviceType != AVHWDeviceType.AV_HWDEVICE_TYPE_NONE)
             {
                 ffmpeg.av_hwdevice_ctx_create(&_pCodecContext->hw_device_ctx, HWDeviceType, null, null, 0).ThrowExceptionIfError();
             }
 
-            if (ffmpeg.avcodec_open2(_pCodecContext, codec, null) >= 0)
-                _receivedFrame = ffmpeg.av_frame_alloc();
+            if (_pCodecContext->hw_device_ctx != null)
+            {
+                Debug.WriteLine("_pCodecContext->hw_device_ctx != null");
+            }
+
+            ffmpeg.avcodec_open2(_pCodecContext, codec, null);
+            //if (ffmpeg.avcodec_open2(_pCodecContext, codec, null) >= 0)
+            //_receivedFrame = ffmpeg.av_frame_alloc();
 
             CodecName = ffmpeg.avcodec_get_name(codec->id);
             FrameSize = new Size(_pCodecContext->width, _pCodecContext->height);
@@ -40,8 +51,8 @@ namespace Voip
                 PixelFormat = AVPixelFormat.AV_PIX_FMT_YUV420P;
             }
 
-            _pPacket = ffmpeg.av_packet_alloc();
-            _pFrame = ffmpeg.av_frame_alloc();
+            //_pPacket = ffmpeg.av_packet_alloc();
+            //_pFrame = ffmpeg.av_frame_alloc();
         }
 
         public string CodecName { get; }
@@ -49,19 +60,16 @@ namespace Voip
         public AVPixelFormat PixelFormat
         {
             get;
-            //{
-            //    //return AVPixelFormat.AV_PIX_FMT_YUV420P;
-            //    ;
-            //}
+            set;
         }
 
         public void Dispose()
         {
-            ffmpeg.av_frame_unref(_pFrame);
-            ffmpeg.av_free(_pFrame);
+            //ffmpeg.av_frame_unref(_pFrame);
+            //ffmpeg.av_free(_pFrame);
 
-            ffmpeg.av_packet_unref(_pPacket);
-            ffmpeg.av_free(_pPacket);
+            //ffmpeg.av_packet_unref(_pPacket);
+            //ffmpeg.av_free(_pPacket);
 
             ffmpeg.avcodec_close(_pCodecContext);
             //var pFormatContext = _pFormatContext;
@@ -71,57 +79,108 @@ namespace Voip
 
         public unsafe Int32 PutVideoStream(byte[] buffer)
         {
-            var pPacket = _pPacket;
-
             try
             {
-                pPacket->size = buffer.Length;//这个填入H264数据帧的大小 
+
+                //pPacket->size = buffer.Length;//这个填入H264数据帧的大小 
                 fixed (byte* pBuffer = buffer)
                 {
-                    pPacket->data = pBuffer;    //这里填入一个指向完整H264数据帧的指针 
+                    var pPacket = ffmpeg.av_packet_alloc();
+                    ffmpeg.av_packet_from_data(pPacket, pBuffer, buffer.Length);
+                    //pPacket->data = pBuffer;
+                    //pPacket->size = buffer.Length;
+                    var flag = 0;
+                    if (buffer.Length > 5)
+                    {
+                        if (buffer[4] == 103)
+                        {
+                            flag = 1;
+                        }
+                    }
+                    pPacket->flags = flag;
 
 
                     int ret = ffmpeg.avcodec_send_packet(_pCodecContext, pPacket);
-                    ret.ThrowExceptionIfError();
                     return ret;
                 }
             }
-            finally
+            catch (Exception ex)
             {
-                ffmpeg.av_packet_unref(pPacket);
+                //Debug.WriteLine(string.Format("PutVideoStream Ex:{0}", ex));
+                return -1;
+            }
+        }
+        public bool TryDecodeNextFrame(out AVFrame frame)
+        {
+            //ffmpeg.av_frame_unref(_pFrame);
+            //ffmpeg.av_frame_unref(_receivedFrame);
+            int error = 0;
+
+            var _pFrame = ffmpeg.av_frame_alloc();
+            var _receivedFrame = ffmpeg.av_frame_alloc();
+
+            while (true)
+            {
+                try
+                {
+                    if (videoQueue.Count <= 0)
+                    {
+                        continue;
+                    }
+
+                    var p = videoQueue.Dequeue();
+                    if (p == null)
+                    {
+                        continue;
+                    }
+                    if (p.Buffer == null)
+                    {
+                        continue;
+                    }
+                    if (p.Buffer.Length == 0)
+                    {
+                        continue;
+                    }
+                    //Debug.WriteLine(Util.GetBufferText(p.Buffer));
+                    //continue;
+
+                    error = PutVideoStream(p.Buffer);
+                    if (error != 0)
+                    {
+                        Debug.WriteLine(string.Format("try put packet err: {0}", error));
+                    }
+                    break;
+                    //error.ThrowExceptionIfError();
+                }
+                catch (Exception ex)
+                {
+                    Debug.WriteLine(string.Format("try put packet ex: {0}", ex));
+                }
+
             }
 
-        }
-        public bool TryDecodeNextFrame(Queue<byte[]> q, out AVFrame frame)
-        {
-            ffmpeg.av_frame_unref(_pFrame);
-            ffmpeg.av_frame_unref(_receivedFrame);
-            int error;
-            //if (buf != null)
-            //{
-            //    PutVideoStream(buf, index);
-            //}
 
+
+            //Debug.WriteLine("---------------------------------try get frame-----------------------------");
+
+            var tryCount = 0;
             do
             {
-                if (q.Count > 0)
-                {
-
-                    var buf = q.Dequeue();
-                    //var list = Util.SplitH264Buffer(buf);
-                    //foreach(var b in list){
-                    //    PutVideoStream(b);
-                    //}
-                    PutVideoStream(buf);
-                }
                 error = ffmpeg.avcodec_receive_frame(_pCodecContext, _pFrame);
-                //Debug.WriteLine("try get frame");
+                //if (error == ffmpeg.AVERROR(ffmpeg.EAGAIN))
+                //{
+                //    Task.Delay(10).Wait();
+                //}
+                tryCount++;
+            } while (error == ffmpeg.AVERROR(ffmpeg.EAGAIN) && tryCount < 100); //超过500ms则放弃
 
-            } while (error == ffmpeg.AVERROR(ffmpeg.EAGAIN));
 
-            //error = ffmpeg.avcodec_receive_frame(_pCodecContext, _pFrame);
+            if (error != 0)
+            {
+                frame = *_pFrame;
+                return false;
+            }
 
-            error.ThrowExceptionIfError();
 
             if (_pCodecContext->hw_device_ctx != null)
             {
@@ -139,41 +198,7 @@ namespace Voip
             return true;
         }
 
-        public bool TryGetNextFrame(byte[] buffer, Int32 yuFormat)
-        {
-            if (ffmpeg.avcodec_receive_frame(_pCodecContext, _pFrame) == 0)
-            {
-                int height = _pCodecContext->height;
-                int width = _pCodecContext->width;
 
-                if (yuFormat == 1)
-                {
-                    ////写入数据  
-                    int yLen = height * width;
-                    Marshal.Copy((IntPtr)_pFrame->data[0], buffer, 0, yLen);
 
-                    int uLen = yLen / 4;
-                    Marshal.Copy((IntPtr)_pFrame->data[1], buffer, yLen, uLen);
-
-                    int vLen = uLen;
-                    Marshal.Copy((IntPtr)_pFrame->data[2], buffer, yLen + uLen, vLen);
-                    return true;
-                }
-                else
-                {
-                    ////写入数据  
-                    int yLen = height * width;
-                    Marshal.Copy((IntPtr)_pFrame->data[0], buffer, 0, yLen);
-
-                    int uLen = yLen / 4;
-                    Marshal.Copy((IntPtr)_pFrame->data[2], buffer, yLen, uLen);
-
-                    int vLen = uLen;
-                    Marshal.Copy((IntPtr)_pFrame->data[1], buffer, yLen + uLen, vLen);
-                    return true;
-                }
-            }
-            return false;
-        }
     }
 }

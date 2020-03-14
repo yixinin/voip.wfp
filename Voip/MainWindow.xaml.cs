@@ -40,35 +40,35 @@ namespace Voip
         const string WsAddr = "ws://localhost:9902/live";
         const string PROTOCOL = "tcp";
 
+        const int FPS = 24;
+
         //const string TOKEN = "00000000000000000000000000000000";
         const long ROOM_ID = 10240;
 
         public VoipClient VoipClient;
 
 
+
         public WaveOut audioPlayer;
         public BufferedWaveProvider audioProvider;
 
-        public VideoStreamDecoder VideoDecoder;
+        //public VideoStreamDecoder VideoDecoder;
 
-        public Queue<byte[]> videoQueue;
+        //public Queue<VideoH264Packet> videoQueue;
 
         public MainWindow()
         {
             InitializeComponent();
 
-
-            VoipClient = new VoipClient(HOST, TCP_PORT, Id.Token, ROOM_ID);
+            var videoQueue = new Queue<VideoH264Packet>(FPS * 10);
+            VoipClient = new VoipClient(videoQueue, HOST, TCP_PORT, Id.Token, ROOM_ID);
             VoipClient.AudioBufferRecieved += VoipClient_AudioBufferRecieved;
-            VoipClient.VideoBufferRecieved += VoipClient_VideoBufferRecieved;
+            //VoipClient.VideoBufferRecieved += VoipClient_VideoBufferRecieved;
             PlayAudio();
-
-            videoQueue = new Queue<byte[]>();
-
-            Util.ConfigureHWDecoder(out var HWDevice);
-            Debug.WriteLine(string.Format("decode device", HWDevice));
-            VideoDecoder = new VideoStreamDecoder(HWDevice);
-            Task.Run(DecodeVideo);
+            Task.Run(() =>
+            {
+                DecodeVideo(videoQueue);
+            });
 
 
             Current = this;
@@ -99,16 +99,18 @@ namespace Voip
             }
         }
 
-        public unsafe void DecodeVideo()
+        public unsafe void DecodeVideo(Queue<VideoH264Packet> videoQueue)
         {
             //ffmpeg.avcodec_register_all();
 
             //var vd = new VideoStreamDecoder(HWDevice)
+            Util.ConfigureHWDecoder(out var HWDevice);
+            Debug.WriteLine(string.Format("decode device {0}", HWDevice));
+            using (var VideoDecoder = new VideoStreamDecoder(videoQueue, HWDevice))
             {
                 VideoDecoder.FrameSize = new System.Drawing.Size(320, 320);
 
 
-                //vd.PutVideoStream(buffer);
                 var sourceSize = VideoDecoder.FrameSize;
                 //var sourcePixelFormat = HWDevice == AVHWDeviceType.AV_HWDEVICE_TYPE_NONE ? VideoDecoder.PixelFormat : Util.GetHWPixelFormat(HWDevice);
                 var sourcePixelFormat = AVPixelFormat.AV_PIX_FMT_YUV420P;
@@ -118,14 +120,22 @@ namespace Voip
                 {
                     var frameNumber = 0;
 
-
-                    while (VideoDecoder.TryDecodeNextFrame(videoQueue, out var frame))
+                    while (true)
                     {
-                        var convertedFrame = vfc.Convert(frame);
-                        convertedFrame.channels = 4;
+                        if (!VoipClient.IsConnect)
+                        {
+                            continue;
+                        }
+                        if (VideoDecoder.TryDecodeNextFrame(out var frame))
+                        {
+                            //frame.format = 0;
+                            var convertedFrame = vfc.Convert(frame);
+                            //convertedFrame.channels = 4;
 
-                        ConvertBitmap(convertedFrame, frameNumber);
-                        frameNumber++;
+                            ConvertBitmap(convertedFrame, frameNumber);
+                            frameNumber++;
+                        }
+
                     }
                 }
             }
@@ -144,8 +154,8 @@ namespace Voip
                             System.Drawing.Imaging.PixelFormat.Format24bppRgb,
                             (IntPtr)convertedFrame.data[0]))
             {
-                //ShowBitmap(bitmap, frameNumber);
-                SaveToFile(bitmap, frameNumber);
+                ShowBitmap(bitmap, frameNumber);
+                //SaveToFile(bitmap, frameNumber);
 
             }
         }
@@ -188,16 +198,19 @@ namespace Voip
             //Debug.WriteLine(Util.GetBufferText(e.Buffer));
             //var bufList = Util.SplitH264Buffer(e.Buffer);
 
-            videoQueue.Enqueue(e.Buffer);
-            //Task.Run(() => { VideoDecoder.PutVideoStream(e.Buffer); });
-
-            //Task.Run(() =>
+            //if (videoQueue == null)
             //{
-            //    foreach (var buf in bufList)
+            //    return;
+            //}
+            //var list = Util.SplitH264Buffer(e.Buffer);
+            //foreach (var buf in list)
+            //{
+            //    lock (videoQueueLocker)
             //    {
-            //        VideoDecoder.PutVideoStream(buf);
-            //    } 
-            //});
+            //        videoQueue.Enqueue(new VideoH264Packet(buf));
+            //    }
+
+            //}
         }
 
         private void VoipClient_AudioBufferRecieved(object sender, MediaBufferArgs e)

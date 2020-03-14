@@ -1,5 +1,6 @@
 ﻿using FFmpeg.AutoGen;
 using System;
+using System.Diagnostics;
 using System.Runtime.InteropServices;
 
 namespace Voip
@@ -10,14 +11,21 @@ namespace Voip
         {
             var bufferSize = 1024;
             var buffer = stackalloc byte[bufferSize];
-            ffmpeg.av_strerror(error, buffer, (ulong) bufferSize);
-            var message = Marshal.PtrToStringAnsi((IntPtr) buffer);
+            ffmpeg.av_strerror(error, buffer, (ulong)bufferSize);
+            var message = Marshal.PtrToStringAnsi((IntPtr)buffer);
             return message;
         }
 
-        public static int ThrowExceptionIfError(this int error)
+        public static int ThrowExceptionIfError(this int error, string msg = "")
         {
-            if (error < 0) throw new ApplicationException(av_strerror(error));
+            if (error < 0)
+            {
+                if (msg != "") Debug.WriteLine(msg);
+                {
+                    throw new ApplicationException(av_strerror(error));
+                }
+
+            }
             return error;
         }
     }

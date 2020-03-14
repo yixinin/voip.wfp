@@ -157,8 +157,7 @@ namespace Voip
                 Array.Copy(buf, frameStart, body, 0, body.Length);
                 list.Add(body);
                 bodySize += body.Length;
-            }
-            Debug.WriteLine(string.Format("{0}-{1}={2}, len={3}", buf.Length, bodySize, buf.Length - bodySize, list.Count));
+            } 
             return list;
         }
 
@@ -180,31 +179,27 @@ namespace Voip
         }
         public static void ConfigureHWDecoder(out AVHWDeviceType HWtype)
         {
-            HWtype = AVHWDeviceType.AV_HWDEVICE_TYPE_NONE;
-            var key = "y";
+            HWtype = AVHWDeviceType.AV_HWDEVICE_TYPE_NONE; 
             var availableHWDecoders = new Dictionary<int, AVHWDeviceType>();
-            if (key == "y")
+            var type = AVHWDeviceType.AV_HWDEVICE_TYPE_NONE;
+            var number = 1;
+            while ((type = ffmpeg.av_hwdevice_iterate_types(type)) != AVHWDeviceType.AV_HWDEVICE_TYPE_NONE)
             {
-                var type = AVHWDeviceType.AV_HWDEVICE_TYPE_NONE;
-                var number = 1;
-                while ((type = ffmpeg.av_hwdevice_iterate_types(type)) != AVHWDeviceType.AV_HWDEVICE_TYPE_NONE)
-                {
-                    availableHWDecoders.Add(number, type);
-                    Debug.WriteLine(String.Format("{0} -> {1}", number, type));
-                    number++;
-                }
-                if (availableHWDecoders.Count == 0)
-                {
-                    Console.WriteLine("Your system have no hardware decoders.");
-                    HWtype = AVHWDeviceType.AV_HWDEVICE_TYPE_NONE;
-                    return;
-                }
-                int decoderNumber = availableHWDecoders.SingleOrDefault(t => t.Value == AVHWDeviceType.AV_HWDEVICE_TYPE_DXVA2).Key;
-                if (decoderNumber == 0)
-                    decoderNumber = availableHWDecoders.First().Key;
-                var inputDecoderNumber = 2;
-                availableHWDecoders.TryGetValue(inputDecoderNumber == 0 ? decoderNumber : inputDecoderNumber, out HWtype);
+                availableHWDecoders.Add(number, type);
+                Debug.WriteLine(String.Format("{0} -> {1}", number, type));
+                number++;
             }
+            if (availableHWDecoders.Count == 0)
+            {
+                Console.WriteLine("Your system have no hardware decoders.");
+                HWtype = AVHWDeviceType.AV_HWDEVICE_TYPE_NONE;
+                return;
+            }
+            int decoderNumber = availableHWDecoders.SingleOrDefault(t => t.Value == AVHWDeviceType.AV_HWDEVICE_TYPE_DXVA2).Key;
+            if (decoderNumber == 0)
+                decoderNumber = availableHWDecoders.First().Key;
+            var inputDecoderNumber = 1;
+            availableHWDecoders.TryGetValue(inputDecoderNumber == 0 ? decoderNumber : inputDecoderNumber, out HWtype);
         }
 
         public static AVPixelFormat GetHWPixelFormat(AVHWDeviceType hWDevice)
