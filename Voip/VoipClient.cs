@@ -426,10 +426,7 @@ namespace Voip
                 {
                     while (audioQueue.Count <= 0)
                     {
-                        Task.Delay(1).ContinueWith(_ =>
-                        {
-
-                        });
+                        Task.Delay(1).Wait();
                     }
                     var p = audioQueue.Dequeue();
                     ps[i] = p;
@@ -469,6 +466,9 @@ namespace Voip
                     continue;
                 }
                 var body = videoPacketQueue.Dequeue();
+
+
+
                 if (body.Length > 0)
                 {
                     var bodySize = body.Length;
@@ -550,6 +550,7 @@ namespace Voip
                                 var body = new byte[ms.Length];
                                 var bodySize = body.Length;
                                 var read = 0;
+                                ms.Seek(0, SeekOrigin.Begin);
                                 while (read < bodySize)
                                 {
                                     var sub = new byte[bodySize - read];
@@ -557,6 +558,8 @@ namespace Voip
                                     Array.Copy(sub, 0, body, read, n);
                                     read += n;
                                 }
+
+
                                 videoPacketQueue.Enqueue(body);
                             }
 
