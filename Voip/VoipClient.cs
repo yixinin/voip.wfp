@@ -105,8 +105,7 @@ namespace Voip
             AudioBits = 16;
             AudioChannels = 1;
             AudioRate = 32000;
-            videoQueue = new Queue<VideoPacket>();
-            audioQueue = new Queue<AudioPacket>();
+            
             FFmpegBinariesHelper.RegisterFFmpegBinaries();
 
         }
@@ -121,8 +120,7 @@ namespace Voip
             AudioBits = 16;
             AudioChannels = 1;
             AudioRate = 8000;
-            videoQueue = new Queue<VideoPacket>();
-            audioQueue = new Queue<AudioPacket>();
+
             FFmpegBinariesHelper.RegisterFFmpegBinaries();
         }
 
@@ -257,7 +255,10 @@ namespace Voip
 
             try
             {
-                this._videoCapture = new OpenCvSharp.VideoCapture(0);
+                videoQueue = new Queue<VideoPacket>();
+                videoPacketQueue = new Queue<byte[]>();
+
+                this._videoCapture = new VideoCapture(0);
                 _videoCapture.Fps = Fps;
                 _videoCapture.FrameWidth = Width;
                 _videoCapture.FrameHeight = Height;
@@ -266,6 +267,8 @@ namespace Voip
                 videoTokenSource = new CancellationTokenSource();
                 var ct = videoTokenSource.Token;
                 _videoOn = true;
+
+                Task.Run(EncodeVideo);
                 Task.Run(handleVideoPacketQueue);
                 Task.Run(() =>
                 {
@@ -274,6 +277,7 @@ namespace Voip
             }
             catch (Exception ex)
             {
+                _videoOn = false;
                 Debug.WriteLine("open camera ex:", ex);
             }
         }
@@ -340,6 +344,8 @@ namespace Voip
             }
             try
             {
+
+                audioQueue = new Queue<AudioPacket>();
                 this._audioCapture = new WaveIn();
                 //var waveFormat = new WaveFormat(AudioRate, AudioBits, AudioChannels);
                 var blockAlign = AudioChannels * (AudioBits / 8);
@@ -359,10 +365,12 @@ namespace Voip
 
                 _audioCapture.StartRecording();
                 _audioOn = true;
+
                 Task.Run(handleAudioQueue);
             }
             catch (Exception ex)
             {
+                _audioOn = false;
                 Debug.WriteLine("open microphone ex:", ex);
             }
         }
@@ -530,18 +538,27 @@ namespace Voip
                 {
                     continue;
                 }
-                var bs = videoPacketQueue.Dequeue();
-                if (bs.Length > 0)
+                var body = videoPacketQueue.Dequeue();
+                if (body.Length > 0)
                 {
-                    var buf = Util.GetVideoBuffer(bs);
+                    var bodySize = body.Length; 
+                    while(bodySize < 1024 * 20)
+                    {
+                        var sub = videoPacketQueue.Dequeue();
+                        var newBody = new byte[body.Length + sub.Length];
+                        Array.Copy(body, 0, newBody, 0, body.Length);
+                        Array.Copy(sub, 0, newBody, body.Length, sub.Length);
+                        body = newBody;
+                    }
+                    
+                    var buf = Util.GetVideoBuffer(body);
                     var n = _socketConn.Send(buf);
-
-
+                     
                     if (n != buf.Length)
                     {
-                        Debug.WriteLine(string.Format("error: video buf send, n={0}, bodySize={1}", n, bs.Length));
+                        Debug.WriteLine(string.Format("error: video buf send, n={0}, bodySize={1}", n, body.Length));
                     }
-                    Debug.WriteLine(string.Format("video buf send, n={0}, bodySize={1}", n, bs.Length));
+                    Debug.WriteLine(string.Format("video buf send, n={0}, bodySize={1}", n, body.Length));
                 }
 
             }
