@@ -1,6 +1,7 @@
 ﻿using FFmpeg.AutoGen;
 using System;
 using System.Collections.Generic;
+using System.Diagnostics;
 using System.Drawing;
 using System.IO;
 using System.Runtime.InteropServices;
@@ -68,29 +69,30 @@ namespace Voip
         }
 
 
-        public unsafe Int32 PutVideoStream(byte[] buffer, int index)
+        public unsafe Int32 PutVideoStream(byte[] buffer)
         {
-            AVPacket pkt = new AVPacket();
-            var packet = &pkt;
-            ffmpeg.av_init_packet(packet);
+            var pPacket = _pPacket;
 
-            packet->size = buffer.Length;//这个填入H264数据帧的大小  
-            packet->stream_index = index;
-            packet->pts = index * 24;
-
-
-
-
-            fixed (byte* pBuffer = buffer)
+            try
             {
-                packet->data = pBuffer;    //这里填入一个指向完整H264数据帧的指针 
+                pPacket->size = buffer.Length;//这个填入H264数据帧的大小 
+                fixed (byte* pBuffer = buffer)
+                {
+                    pPacket->data = pBuffer;    //这里填入一个指向完整H264数据帧的指针 
 
 
-                int ret = ffmpeg.avcodec_send_packet(_pCodecContext, packet);
-                return ret;
+                    int ret = ffmpeg.avcodec_send_packet(_pCodecContext, pPacket);
+                    ret.ThrowExceptionIfError();
+                    return ret;
+                }
             }
+            finally
+            {
+                ffmpeg.av_packet_unref(pPacket);
+            }
+
         }
-        public bool TryDecodeNextFrame(out AVFrame frame)
+        public bool TryDecodeNextFrame(Queue<byte[]> q, out AVFrame frame)
         {
             ffmpeg.av_frame_unref(_pFrame);
             ffmpeg.av_frame_unref(_receivedFrame);
@@ -102,14 +104,22 @@ namespace Voip
 
             do
             {
+                if (q.Count > 0)
+                {
+
+                    var buf = q.Dequeue();
+                    //var list = Util.SplitH264Buffer(buf);
+                    //foreach(var b in list){
+                    //    PutVideoStream(b);
+                    //}
+                    PutVideoStream(buf);
+                }
                 error = ffmpeg.avcodec_receive_frame(_pCodecContext, _pFrame);
+                //Debug.WriteLine("try get frame");
+
             } while (error == ffmpeg.AVERROR(ffmpeg.EAGAIN));
+
             //error = ffmpeg.avcodec_receive_frame(_pCodecContext, _pFrame);
-            //if (error == ffmpeg.AVERROR(ffmpeg.EAGAIN))
-            //{
-            //    frame = new AVFrame();
-            //    return false;
-            //}
 
             error.ThrowExceptionIfError();
 

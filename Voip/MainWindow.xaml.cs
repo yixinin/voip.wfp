@@ -49,7 +49,9 @@ namespace Voip
         public WaveOut audioPlayer;
         public BufferedWaveProvider audioProvider;
 
-        //public VideoStreamDecoder VideoDecoder;
+        public VideoStreamDecoder VideoDecoder;
+
+        public Queue<byte[]> videoQueue;
 
         public MainWindow()
         {
@@ -60,7 +62,15 @@ namespace Voip
             VoipClient.AudioBufferRecieved += VoipClient_AudioBufferRecieved;
             VoipClient.VideoBufferRecieved += VoipClient_VideoBufferRecieved;
             PlayAudio();
-            //Task.Run(DecodeVideo);
+
+            videoQueue = new Queue<byte[]>();
+
+            Util.ConfigureHWDecoder(out var HWDevice);
+            Debug.WriteLine(string.Format("decode device", HWDevice));
+            VideoDecoder = new VideoStreamDecoder(HWDevice);
+            Task.Run(DecodeVideo);
+
+
             Current = this;
         }
 
@@ -89,19 +99,17 @@ namespace Voip
             }
         }
 
-        public unsafe void DecodeVideo(byte[] buffer)
+        public unsafe void DecodeVideo()
         {
-            ffmpeg.avcodec_register_all();
-            Util.ConfigureHWDecoder(out var HWDevice);
-            using (var vd = new VideoStreamDecoder(HWDevice))
+            //ffmpeg.avcodec_register_all();
+
+            //var vd = new VideoStreamDecoder(HWDevice)
             {
-                var bufList = Util.SplitH264Buffer(buffer);
-                vd.FrameSize = new System.Drawing.Size(320, 320);
-                for (var i = 0; i < bufList.Count; i++)
-                {
-                    vd.PutVideoStream(bufList[i], i);
-                }
-                var sourceSize = vd.FrameSize;
+                VideoDecoder.FrameSize = new System.Drawing.Size(320, 320);
+
+
+                //vd.PutVideoStream(buffer);
+                var sourceSize = VideoDecoder.FrameSize;
                 //var sourcePixelFormat = HWDevice == AVHWDeviceType.AV_HWDEVICE_TYPE_NONE ? VideoDecoder.PixelFormat : Util.GetHWPixelFormat(HWDevice);
                 var sourcePixelFormat = AVPixelFormat.AV_PIX_FMT_YUV420P;
                 var destinationSize = sourceSize;
@@ -109,30 +117,15 @@ namespace Voip
                 using (var vfc = new VideoFrameConverter(sourceSize, sourcePixelFormat, destinationSize, destinationPixelFormat))
                 {
                     var frameNumber = 0;
-                    
 
-                    while (vd.TryDecodeNextFrame( out var frame))
+
+                    while (VideoDecoder.TryDecodeNextFrame(videoQueue, out var frame))
                     {
-                        //if (index < bufList.Count)
-                        //{
-                        //    buf = bufList[index];
-                        //}
-                        //AVFrame frame;
-                        //while (true)
-                        //{
-                        //    var b = ;
-                        //    if (b)
-                        //    {
-                        //        break;
-                        //    }
-                        //    index++;
-                        //}
-                        Debug.WriteLine(string.Format("total frame: {0}, frame {1}", bufList.Count, frameNumber));
                         var convertedFrame = vfc.Convert(frame);
                         convertedFrame.channels = 4;
 
                         ConvertBitmap(convertedFrame, frameNumber);
-                        frameNumber++; 
+                        frameNumber++;
                     }
                 }
             }
@@ -151,7 +144,8 @@ namespace Voip
                             System.Drawing.Imaging.PixelFormat.Format24bppRgb,
                             (IntPtr)convertedFrame.data[0]))
             {
-                ShowBitmap(bitmap, frameNumber);
+                //ShowBitmap(bitmap, frameNumber);
+                SaveToFile(bitmap, frameNumber);
 
             }
         }
@@ -194,7 +188,9 @@ namespace Voip
             //Debug.WriteLine(Util.GetBufferText(e.Buffer));
             //var bufList = Util.SplitH264Buffer(e.Buffer);
 
-            Task.Run(() => { DecodeVideo(e.Buffer); });
+            videoQueue.Enqueue(e.Buffer);
+            //Task.Run(() => { VideoDecoder.PutVideoStream(e.Buffer); });
+
             //Task.Run(() =>
             //{
             //    foreach (var buf in bufList)

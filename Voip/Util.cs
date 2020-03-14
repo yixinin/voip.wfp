@@ -1,6 +1,7 @@
 ﻿using FFmpeg.AutoGen;
 using System;
 using System.Collections.Generic;
+using System.Diagnostics;
 using System.Drawing;
 using System.Drawing.Imaging;
 using System.Linq;
@@ -110,32 +111,54 @@ namespace Voip
 
         public static List<byte[]> SplitH264Buffer(byte[] buf)
         {
+            var bodySize = 0;
             var list = new List<byte[]>();
             var frameStart = 0;
-            var i = 4;
+            var i = 0;
 
             while (i < buf.Length - 4)
             {
-                if (buf[i] == 0 && buf[i + 1] == 0 && buf[i + 2] == 0 && buf[i + 3] == 1)
+                if (buf[i] == 0 && buf[i + 1] == 0 && buf[i + 2] == 0 && buf[i + 3] == 1) // 0001
                 {
-                    var body = new byte[i - frameStart];
-                    Array.Copy(buf, frameStart, body, 0, body.Length);
-                    list.Add(body);
+                    if (i > 0)
+                    {
+                        var body = new byte[i - frameStart];
+                        Array.Copy(buf, frameStart, body, 0, body.Length);
+                        list.Add(body);
+                        bodySize += body.Length;
+
+                    }
+
                     frameStart = i;
-                    i = i + 4; 
+                    i = i + 4;
+
                     continue;
                 }
-                if (buf[i] == 0 && buf[i + 1] == 0 && buf[i + 3] == 1)
+                if (buf[i] == 0 && buf[i + 1] == 0 && buf[i + 3] == 1) // 001
                 {
-                    var body = new byte[i - frameStart];
-                    Array.Copy(buf, frameStart, body, 0, body.Length);
-                    list.Add(body);
+                    if (i > 0)
+                    {
+                        var body = new byte[i - frameStart];
+                        Array.Copy(buf, frameStart, body, 0, body.Length);
+                        list.Add(body);
+                        bodySize += body.Length;
+                    }
+
                     frameStart = i;
-                    i += 3; 
+                    i += 3;
+
                     continue;
                 }
                 i++;
             }
+            if (frameStart != buf.Length - 1)
+            {
+                var body = new byte[buf.Length - frameStart];
+                Array.Copy(buf, frameStart, body, 0, body.Length);
+                list.Add(body);
+                bodySize += body.Length;
+            }
+            Debug.WriteLine(string.Format("{0}-{1}={2}, len={3}", buf.Length, bodySize, buf.Length - bodySize, list.Count));
             return list;
         }
 
@@ -158,18 +181,17 @@ namespace Voip
         public static void ConfigureHWDecoder(out AVHWDeviceType HWtype)
         {
             HWtype = AVHWDeviceType.AV_HWDEVICE_TYPE_NONE;
-            Console.WriteLine("Use hardware acceleration for decoding?[n]");
             var key = "y";
             var availableHWDecoders = new Dictionary<int, AVHWDeviceType>();
             if (key == "y")
             {
-                Console.WriteLine("Select hardware decoder:");
                 var type = AVHWDeviceType.AV_HWDEVICE_TYPE_NONE;
-                var number = 0;
+                var number = 1;
                 while ((type = ffmpeg.av_hwdevice_iterate_types(type)) != AVHWDeviceType.AV_HWDEVICE_TYPE_NONE)
                 {
-                    Console.WriteLine($"{++number}. {type}");
                     availableHWDecoders.Add(number, type);
+                    Debug.WriteLine(String.Format("{0} -> {1}", number, type));
+                    number++;
                 }
                 if (availableHWDecoders.Count == 0)
                 {
@@ -180,8 +202,7 @@ namespace Voip
                 int decoderNumber = availableHWDecoders.SingleOrDefault(t => t.Value == AVHWDeviceType.AV_HWDEVICE_TYPE_DXVA2).Key;
                 if (decoderNumber == 0)
                     decoderNumber = availableHWDecoders.First().Key;
-                Console.WriteLine($"Selected [{decoderNumber}]");
-                var inputDecoderNumber = 1;
+                var inputDecoderNumber = 2;
                 availableHWDecoders.TryGetValue(inputDecoderNumber == 0 ? decoderNumber : inputDecoderNumber, out HWtype);
             }
         }

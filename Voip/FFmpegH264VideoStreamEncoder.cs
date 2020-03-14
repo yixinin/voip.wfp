@@ -13,13 +13,12 @@ namespace Voip
         private readonly int _linesizeY;
         private readonly AVCodec* _pCodec;
         private readonly AVCodecContext* _pCodecContext;
-        private readonly Stream _stream;
+        //private readonly Stream _stream;
         private readonly int _uSize;
         private readonly int _ySize;
 
-        public H264VideoStreamEncoder(Stream stream, int fps, Size frameSize)
+        public H264VideoStreamEncoder(int fps, Size frameSize)
         {
-            _stream = stream;
             _frameSize = frameSize;
 
             var codecId = AVCodecID.AV_CODEC_ID_H264;
@@ -29,7 +28,7 @@ namespace Voip
             _pCodecContext = ffmpeg.avcodec_alloc_context3(_pCodec);
             _pCodecContext->width = frameSize.Width;
             _pCodecContext->height = frameSize.Height;
-            _pCodecContext->time_base = new AVRational {num = 1, den = fps};
+            _pCodecContext->time_base = new AVRational { num = 1, den = fps };
             _pCodecContext->pix_fmt = AVPixelFormat.AV_PIX_FMT_YUV420P;
             ffmpeg.av_opt_set(_pCodecContext->priv_data, "preset", "veryslow", 0);
 
@@ -50,9 +49,9 @@ namespace Voip
             ffmpeg.av_free(_pCodec);
         }
 
-        public void Encode(AVFrame frame)
+        public byte[] Encode(AVFrame frame, Stream stream)
         {
-            if (frame.format != (int) _pCodecContext->pix_fmt) throw new ArgumentException("Invalid pixel format.", nameof(frame));
+            if (frame.format != (int)_pCodecContext->pix_fmt) throw new ArgumentException("Invalid pixel format.", nameof(frame));
             if (frame.width != _frameSize.Width) throw new ArgumentException("Invalid width.", nameof(frame));
             if (frame.height != _frameSize.Height) throw new ArgumentException("Invalid height.", nameof(frame));
             if (frame.linesize[0] != _linesizeY) throw new ArgumentException("Invalid Y linesize.", nameof(frame));
@@ -74,12 +73,21 @@ namespace Voip
 
                 error.ThrowExceptionIfError();
 
-                using (var packetStream = new UnmanagedMemoryStream(pPacket->data, pPacket->size)) packetStream.CopyTo(_stream);
+                using (var packetStream = new UnmanagedMemoryStream(pPacket->data, pPacket->size))
+                {
+                    packetStream.CopyTo(stream);
+
+                    var buf = new byte[stream.Length];
+                    return buf;
+                }
+
+
             }
             finally
             {
                 ffmpeg.av_packet_unref(pPacket);
             }
+            return null;
         }
     }
 }
