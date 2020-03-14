@@ -191,27 +191,7 @@ namespace Voip
                     MessagePage.Current.videoImage.Source = bmp;
                 }));
             }
-        }
-
-        private void VoipClient_VideoBufferRecieved(object sender, MediaBufferArgs e)
-        {
-            //Debug.WriteLine(Util.GetBufferText(e.Buffer));
-            //var bufList = Util.SplitH264Buffer(e.Buffer);
-
-            //if (videoQueue == null)
-            //{
-            //    return;
-            //}
-            //var list = Util.SplitH264Buffer(e.Buffer);
-            //foreach (var buf in list)
-            //{
-            //    lock (videoQueueLocker)
-            //    {
-            //        videoQueue.Enqueue(new VideoH264Packet(buf));
-            //    }
-
-            //}
-        }
+        } 
 
         private void VoipClient_AudioBufferRecieved(object sender, MediaBufferArgs e)
         {

@@ -455,93 +455,6 @@ namespace Voip
             }
         }
 
-        //private void handleVideoQueue()
-        //{
-        //    while (VideoOn)
-        //    {
-        //        var total = Fps;
-        //        var ps = new VideoPacket[total];
-        //        for (var i = 0; i < total; i++)
-        //        {
-        //            while (videoQueue.Count <= 0)
-        //            {
-        //                Task.Delay(1).ContinueWith(_ =>
-        //                {
-
-        //                });
-        //            }
-        //            var p = videoQueue.Dequeue();
-        //            ps[i] = p;
-        //        }
-
-        //        //转码
-        //        using (var fs = new MemoryStream()) //存储转码后的buffer
-        //        {
-        //            EncodeVideo(ps, fs);
-
-        //            var body = new byte[fs.Length];
-        //            fs.Seek(0, SeekOrigin.Begin);
-        //            var read = 0;
-
-        //            while (read < fs.Length)
-        //            {
-        //                var sub = new byte[fs.Length - read];
-        //                var msn = fs.Read(sub, 0, sub.Length);
-        //                Array.Copy(sub, 0, body, read, msn);
-        //                read += msn;
-        //            }
-        //            var buf = Util.GetVideoBuffer(body);
-        //            var n = _socketConn.Send(buf);
-        //            if (n != buf.Length)
-        //            {
-        //                Debug.WriteLine(string.Format("error: video buf send, n={0}, bodySize={1}", n, buf.Length));
-        //            }
-        //            //Debug.WriteLine(string.Format("video frames:{0}, size:{1}", ps.Length, buf.Length));
-        //        }
-
-        //    }
-        //}
-
-        //private unsafe void EncodeVideo(VideoPacket[] ps, MemoryStream fs)
-        //{
-        //    var sourceSize = new System.Drawing.Size(Height, Width);
-        //    var sourcePixelFormat = AVPixelFormat.AV_PIX_FMT_BGR24;
-        //    var destinationSize = sourceSize;
-        //    var destinationPixelFormat = AVPixelFormat.AV_PIX_FMT_YUV420P;
-        //    using (var vfc = new VideoFrameConverter(sourceSize, sourcePixelFormat, destinationSize, destinationPixelFormat))
-        //    {
-        //        using (var vse = new H264VideoStreamEncoder(fs, Fps, destinationSize))
-        //        {
-        //            var frameNumber = 0;
-        //            //读取
-        //            foreach (var p in ps)
-        //            {
-        //                byte[] bitmapData = Util.GetBitmapData(p.Bmp);
-
-        //                fixed (byte* pBitmapData = bitmapData)
-        //                {
-        //                    var data = new byte_ptrArray8 { [0] = pBitmapData };
-        //                    var linesize = new int_array8 { [0] = bitmapData.Length / sourceSize.Height };
-        //                    var frame = new AVFrame
-        //                    {
-        //                        data = data,
-        //                        linesize = linesize,
-        //                        height = sourceSize.Height,
-        //                        width = sourceSize.Width,
-        //                    };
-        //                    var convertedFrame = vfc.Convert(frame);
-        //                    convertedFrame.pts = frameNumber * Fps;
-        //                    vse.Encode(convertedFrame);
-        //                }
-
-        //                //Console.WriteLine($"frame: {frameNumber}");
-        //                frameNumber++;
-
-        //            }
-        //        }
-        //    }
-
-        //}
 
         private void handleVideoPacketQueue()
         {
@@ -587,6 +500,10 @@ namespace Voip
                 }
 
             }
+        }
+        private void DisplayLocal(byte[] body)
+        {
+            VideoH264Queue.Enqueue(new VideoH264Packet(body));
         }
 
         private unsafe void EncodeVideo()

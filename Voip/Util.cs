@@ -198,7 +198,7 @@ namespace Voip
             int decoderNumber = availableHWDecoders.SingleOrDefault(t => t.Value == AVHWDeviceType.AV_HWDEVICE_TYPE_DXVA2).Key;
             if (decoderNumber == 0)
                 decoderNumber = availableHWDecoders.First().Key;
-            var inputDecoderNumber = 1;
+            var inputDecoderNumber = 2;
             availableHWDecoders.TryGetValue(inputDecoderNumber == 0 ? decoderNumber : inputDecoderNumber, out HWtype);
         }
 
