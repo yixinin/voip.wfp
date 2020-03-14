@@ -542,7 +542,8 @@ namespace Voip
                 if (body.Length > 0)
                 {
                     var bodySize = body.Length;
-                    while (bodySize < 1024 * 20)
+                    var bufNum = 0;
+                    while (bodySize < 1024 * 20 && bufNum < Fps)
                     {
                         if (videoPacketQueue.Count <= 0)
                         {
@@ -552,8 +553,10 @@ namespace Voip
                         var newBody = new byte[body.Length + sub.Length];
                         Array.Copy(body, 0, newBody, 0, body.Length);
                         Array.Copy(sub, 0, newBody, body.Length, sub.Length);
+
                         body = newBody;
                         bodySize += sub.Length;
+                        bufNum++;
                     }
 
                     var buf = Util.GetVideoBuffer(body);
