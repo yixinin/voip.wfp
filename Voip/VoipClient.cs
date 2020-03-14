@@ -105,7 +105,7 @@ namespace Voip
             AudioBits = 16;
             AudioChannels = 1;
             AudioRate = 32000;
-            
+
             FFmpegBinariesHelper.RegisterFFmpegBinaries();
 
         }
@@ -541,24 +541,29 @@ namespace Voip
                 var body = videoPacketQueue.Dequeue();
                 if (body.Length > 0)
                 {
-                    var bodySize = body.Length; 
-                    while(bodySize < 1024 * 20)
+                    var bodySize = body.Length;
+                    while (bodySize < 1024 * 20)
                     {
+                        if (videoPacketQueue.Count <= 0)
+                        {
+                            continue;
+                        }
                         var sub = videoPacketQueue.Dequeue();
                         var newBody = new byte[body.Length + sub.Length];
                         Array.Copy(body, 0, newBody, 0, body.Length);
                         Array.Copy(sub, 0, newBody, body.Length, sub.Length);
                         body = newBody;
+                        bodySize += sub.Length;
                     }
-                    
+
                     var buf = Util.GetVideoBuffer(body);
                     var n = _socketConn.Send(buf);
-                     
+
                     if (n != buf.Length)
                     {
-                        Debug.WriteLine(string.Format("error: video buf send, n={0}, bodySize={1}", n, body.Length));
+                        Debug.WriteLine(string.Format("error: video buf send, n={0}, bodySize={1}", n, bodySize));
                     }
-                    Debug.WriteLine(string.Format("video buf send, n={0}, bodySize={1}", n, body.Length));
+                    Debug.WriteLine(string.Format("video buf send, n={0}, bodySize={1}", n, bodySize));
                 }
 
             }
