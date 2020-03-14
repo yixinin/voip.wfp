@@ -77,9 +77,6 @@
     <Reference Include="BouncyCastle, Version=1.8.1.0, Culture=neutral, PublicKeyToken=0e99375e54769942, processorArchitecture=MSIL">
       <HintPath>..\packages\FM.LiveSwitch.1.2.5.3110\lib\net45\BouncyCastle.dll</HintPath>
     </Reference>
-    <Reference Include="FFmpeg.AutoGen, Version=4.2.2.1, Culture=neutral, PublicKeyToken=9b7632533a381715, processorArchitecture=MSIL">
-      <HintPath>..\packages\FFmpeg.AutoGen.4.2.2.1\lib\net472\FFmpeg.AutoGen.dll</HintPath>
-    </Reference>
     <Reference Include="FM.LiveSwitch, Version=1.2.5.3110, Culture=neutral, processorArchitecture=MSIL">
       <HintPath>..\packages\FM.LiveSwitch.1.2.5.3110\lib\net45\FM.LiveSwitch.dll</HintPath>
     </Reference>
@@ -138,12 +135,6 @@
       <SubType>Designer</SubType>
     </ApplicationDefinition>
     <Compile Include="AviWriter.cs" />
-    <Compile Include="FFmpegBinariesHelper.cs" />
-    <Compile Include="FFmpegHelper.cs" />
-    <Compile Include="FFmpegH264VideoStreamEncoder.cs" />
-    <Compile Include="FFmpegIOVideoDecoder.cs" />
-    <Compile Include="FFmpegVideoFrameConverter.cs" />
-    <Compile Include="FFmpegVideoStreamDecoder.cs" />
     <Compile Include="GroupPage.xaml.cs">
       <DependentUpon>GroupPage.xaml</DependentUpon>
     </Compile>
@@ -204,9 +195,6 @@
   </ItemGroup>
   <ItemGroup>
     <None Include="App.config" />
-  </ItemGroup>
-  <ItemGroup>
-    <Resource Include="frames\avi.txt" />
   </ItemGroup>
   <Import Project="$(MSBuildToolsPath)\Microsoft.CSharp.targets" />
   <Target Name="EnsureNuGetPackageBuildImports" BeforeTargets="PrepareForBuild">

@@ -1,4 +1,4 @@
-﻿using FFmpeg.AutoGen;
+﻿
 using NAudio.Wave;
 using OpenCvSharp;
 using System;
@@ -123,7 +123,6 @@ namespace Voip
             AudioChannels = 1;
             AudioRate = 32000;
 
-            FFmpegBinariesHelper.RegisterFFmpegBinaries();
 
         }
 
@@ -138,7 +137,6 @@ namespace Voip
             AudioChannels = 1;
             AudioRate = 8000;
 
-            FFmpegBinariesHelper.RegisterFFmpegBinaries();
         }
 
         public void Connect(string p)
@@ -276,16 +274,18 @@ namespace Voip
                 videoPacketQueue = new Queue<byte[]>();
 
                 this._videoCapture = new VideoCapture(0);
-                _videoCapture.Fps = Fps;
-                _videoCapture.FrameWidth = Width;
-                _videoCapture.FrameHeight = Height;
-                _videoCapture.AutoFocus = AutoFocus;
+                _videoCapture.Set(3, Width);
+                _videoCapture.Set(VideoCaptureProperties.FrameHeight, Height);
+                _videoCapture.Set(VideoCaptureProperties.Fps, 24);
+                _videoCapture.Set(VideoCaptureProperties.AutoFocus, 1);
+
 
                 videoTokenSource = new CancellationTokenSource();
                 var ct = videoTokenSource.Token;
                 _videoOn = true;
 
-                Task.Run(EncodeVideo);
+                //Task.Run(EncodeVideo);
+                Task.Run(EncodeH264);
                 Task.Run(handleVideoPacketQueue);
                 Task.Run(() =>
                 {
@@ -419,7 +419,7 @@ namespace Voip
         {
             while (AudioOn)
             {
-                var total = 5;
+                var total = 1;
                 var bodySize = 0;
                 var ps = new AudioPacket[total];
                 for (var i = 0; i < total; i++)
@@ -471,32 +471,14 @@ namespace Voip
 
                 if (body.Length > 0)
                 {
-                    var bodySize = body.Length;
-                    var bufNum = 0;
-                    while (bodySize < 1024 * 20 && bufNum < Fps)
-                    {
-                        if (videoPacketQueue.Count <= 0)
-                        {
-                            continue;
-                        }
-                        var sub = videoPacketQueue.Dequeue();
-                        var newBody = new byte[body.Length + sub.Length];
-                        Array.Copy(body, 0, newBody, 0, body.Length);
-                        Array.Copy(sub, 0, newBody, body.Length, sub.Length);
-
-                        body = newBody;
-                        bodySize += sub.Length;
-                        bufNum++;
-                    }
-
                     var buf = Util.GetVideoBuffer(body);
                     var n = _socketConn.Send(buf);
 
                     if (n != buf.Length)
                     {
-                        Debug.WriteLine(string.Format("error: video buf send, n={0}, bodySize={1}", n, bodySize));
+                        Debug.WriteLine(string.Format("error: video buf send, n={0}, bodySize={1}", n, body.Length));
                     }
-                    Debug.WriteLine(string.Format("video buf send, n={0}, bodySize={1}", n, bodySize));
+                    Debug.WriteLine(string.Format("{0}->{1}", body.Length, Util.GetBufferText(Util.GetVideoHeader(body.Length))));
                 }
 
             }
@@ -506,74 +488,36 @@ namespace Voip
             VideoH264Queue.Enqueue(new VideoH264Packet(body));
         }
 
-        private unsafe void EncodeVideo()
+        
+        private void EncodeH264()
         {
-
-            var sourceSize = new System.Drawing.Size(Height, Width);
-            var sourcePixelFormat = AVPixelFormat.AV_PIX_FMT_BGR24;
-            var destinationSize = sourceSize;
-            var destinationPixelFormat = AVPixelFormat.AV_PIX_FMT_YUV420P;
-
-            using (var vfc = new VideoFrameConverter(sourceSize, sourcePixelFormat, destinationSize, destinationPixelFormat))
+            // H264エンコーダーを作成(create H264 encoder)
+            var encoder = new OpenH264Lib.Encoder("openh264-2.0.0-win64.dll");
+            //var firstFrame = new Bitmap(path);
+            // 1フレームエンコードするごとにライターに書き込み(write frame data for each frame encoded)
+            OpenH264Lib.Encoder.OnEncodeCallback onEncode = (data, length, frameType) =>
             {
-                using (var vse = new H264VideoStreamEncoder(Fps, destinationSize))
+                //var keyFrame = (frameType == OpenH264Lib.Encoder.FrameType.IDR) || (frameType == OpenH264Lib.Encoder.FrameType.I);
+                videoPacketQueue.Enqueue(data);
+            };
+            // H264エンコーダーの設定(encoder setup)
+            int bps = 5000 * 1000;         // target bitrate. 5Mbps.
+            float keyFrameInterval = 2.0f; // insert key frame interval. unit is second. 
+            encoder.Setup(Width, Height, bps, Fps, keyFrameInterval, onEncode);
+
+            while (VideoOn)
+            {
+                if (videoQueue.Count <= 0)
                 {
-                    var frameNumber = 0;
-                    //读取
-                    while (VideoOn)
-                    {
-                        if (videoQueue.Count <= 0)
-                        {
-                            continue;
-                        }
-
-                        var p = videoQueue.Dequeue();
-                        byte[] bitmapData = Util.GetBitmapData(p.Bmp);
-
-                        fixed (byte* pBitmapData = bitmapData)
-                        {
-                            var data = new byte_ptrArray8 { [0] = pBitmapData };
-                            var linesize = new int_array8 { [0] = bitmapData.Length / sourceSize.Height };
-                            var frame = new AVFrame
-                            {
-                                data = data,
-                                linesize = linesize,
-                                height = sourceSize.Height,
-                                width = sourceSize.Width,
-                            };
-                            var convertedFrame = vfc.Convert(frame);
-                            convertedFrame.pts = frameNumber * Fps;
-                            using (var ms = new MemoryStream())
-                            {
-                                vse.Encode(convertedFrame, ms);
-                                //发送到buffer队列
-                                var body = new byte[ms.Length];
-                                var bodySize = body.Length;
-                                var read = 0;
-                                ms.Seek(0, SeekOrigin.Begin);
-                                while (read < bodySize)
-                                {
-                                    var sub = new byte[bodySize - read];
-                                    var n = ms.Read(sub, 0, sub.Length);
-                                    Array.Copy(sub, 0, body, read, n);
-                                    read += n;
-                                }
-
-
-                                videoPacketQueue.Enqueue(body);
-                            }
-
-                        }
-
-                        //Console.WriteLine($"frame: {frameNumber}");
-                        frameNumber++;
-
-                    }
+                    continue;
                 }
+
+                var p = videoQueue.Dequeue();
+                var bmp = p.Bmp;
+                encoder.Encode(bmp);
+                bmp.Dispose();
             }
-
         }
-
         private void Recv(CancellationToken ct)
         {
             while (true)
@@ -630,21 +574,9 @@ namespace Voip
                             AudioBufferRecieved?.Invoke(this, new MediaBufferArgs(body));
                             break;
                         case 2:
-                            //video
-                            //var list = Util.SplitH264Buffer(body);
+
                             VideoH264Queue.Enqueue(new VideoH264Packet(body));
-                            //var list = Util.SplitH264Buffer(body);
-
-                            //foreach (var buf in list)
-                            //{
-                            //    var p = new VideoH264Packet(buf);
-                            //    if (p.IsPPS || hasPPS)
-                            //    {
-                            //        hasPPS = true;
-                            //        VideoH264Queue.Enqueue(p);
-                            //    }
-
-                            //}
+                            
                             break;
                         default:
                             Debug.WriteLine("unknown buf header", header);

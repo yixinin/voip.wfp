@@ -1,4 +1,4 @@
-﻿using FFmpeg.AutoGen;
+﻿
 using System;
 using System.Collections.Generic;
 using System.Diagnostics;
@@ -196,61 +196,7 @@ namespace Voip
                 frameBitmap.UnlockBits(bitmapData);
             }
         }
-        public static void ConfigureHWDecoder(out AVHWDeviceType HWtype)
-        {
-            HWtype = AVHWDeviceType.AV_HWDEVICE_TYPE_NONE;
-            var availableHWDecoders = new Dictionary<int, AVHWDeviceType>();
-            var type = AVHWDeviceType.AV_HWDEVICE_TYPE_NONE;
-            var number = 1;
-            while ((type = ffmpeg.av_hwdevice_iterate_types(type)) != AVHWDeviceType.AV_HWDEVICE_TYPE_NONE)
-            {
-                availableHWDecoders.Add(number, type);
-                Debug.WriteLine(String.Format("{0} -> {1}", number, type));
-                number++;
-            }
-            if (availableHWDecoders.Count == 0)
-            {
-                Console.WriteLine("Your system have no hardware decoders.");
-                HWtype = AVHWDeviceType.AV_HWDEVICE_TYPE_NONE;
-                return;
-            }
-            int decoderNumber = availableHWDecoders.SingleOrDefault(t => t.Value == AVHWDeviceType.AV_HWDEVICE_TYPE_DXVA2).Key;
-            if (decoderNumber == 0)
-                decoderNumber = availableHWDecoders.First().Key;
-            var inputDecoderNumber = 2;
-            availableHWDecoders.TryGetValue(inputDecoderNumber == 0 ? decoderNumber : inputDecoderNumber, out HWtype);
-        }
 
-        public static AVPixelFormat GetHWPixelFormat(AVHWDeviceType hWDevice)
-        {
-            switch (hWDevice)
-            {
-                case AVHWDeviceType.AV_HWDEVICE_TYPE_NONE:
-                    return AVPixelFormat.AV_PIX_FMT_NONE;
-                case AVHWDeviceType.AV_HWDEVICE_TYPE_VDPAU:
-                    return AVPixelFormat.AV_PIX_FMT_VDPAU;
-                case AVHWDeviceType.AV_HWDEVICE_TYPE_CUDA:
-                    return AVPixelFormat.AV_PIX_FMT_CUDA;
-                case AVHWDeviceType.AV_HWDEVICE_TYPE_VAAPI:
-                    return AVPixelFormat.AV_PIX_FMT_VAAPI;
-                case AVHWDeviceType.AV_HWDEVICE_TYPE_DXVA2:
-                    return AVPixelFormat.AV_PIX_FMT_NV12;
-                case AVHWDeviceType.AV_HWDEVICE_TYPE_QSV:
-                    return AVPixelFormat.AV_PIX_FMT_QSV;
-                case AVHWDeviceType.AV_HWDEVICE_TYPE_VIDEOTOOLBOX:
-                    return AVPixelFormat.AV_PIX_FMT_VIDEOTOOLBOX;
-                case AVHWDeviceType.AV_HWDEVICE_TYPE_D3D11VA:
-                    return AVPixelFormat.AV_PIX_FMT_NV12;
-                case AVHWDeviceType.AV_HWDEVICE_TYPE_DRM:
-                    return AVPixelFormat.AV_PIX_FMT_DRM_PRIME;
-                case AVHWDeviceType.AV_HWDEVICE_TYPE_OPENCL:
-                    return AVPixelFormat.AV_PIX_FMT_OPENCL;
-                case AVHWDeviceType.AV_HWDEVICE_TYPE_MEDIACODEC:
-                    return AVPixelFormat.AV_PIX_FMT_MEDIACODEC;
-                default:
-                    return AVPixelFormat.AV_PIX_FMT_NONE;
-            }
-        }
 
     }
 }

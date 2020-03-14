@@ -37,7 +37,10 @@ namespace Voip
         public Bitmap Bmp { get; set; }
         public VideoPacket(Mat mat)
         {
-            this.Bmp = mat.ToBitmap(System.Drawing.Imaging.PixelFormat.Format24bppRgb);
+            var rect = new Rect(160, 20, 320, 320);
+            var RectMat = new Mat(mat, rect);
+
+            this.Bmp = BitmapConverter.ToBitmap(RectMat, System.Drawing.Imaging.PixelFormat.Format24bppRgb);
         }
     }
 
