@@ -40,7 +40,7 @@ namespace Voip
         const string WsAddr = "ws://localhost:9902/live";
         const string PROTOCOL = "tcp";
 
-        const string TOKEN = "00000000000000000000000000000000";
+        //const string TOKEN = "00000000000000000000000000000000";
         const long ROOM_ID = 10240;
 
         public VoipClient VoipClient;
@@ -58,7 +58,7 @@ namespace Voip
             InitializeComponent();
 
 
-            VoipClient = new VoipClient(HOST, TCP_PORT, TOKEN, ROOM_ID);
+            VoipClient = new VoipClient(HOST, TCP_PORT, Id.Token, ROOM_ID);
             VoipClient.AudioBufferRecieved += VoipClient_AudioBufferRecieved;
             VoipClient.VideoBufferRecieved += VoipClient_VideoBufferRecieved;
             PlayAudio();
