@@ -17,6 +17,10 @@ namespace Voip
         {
             return BitConverter.ToUInt32(bs, 0);
         }
+        public static int BytesToInt32(byte[] bs)
+        {
+            return BitConverter.ToInt32(bs, 0);
+        }
         public static byte[] Uint32ToBytes(int i)
         {
             //var buf = new byte[4];
@@ -36,8 +40,10 @@ namespace Voip
 
         public static byte[] Int64ToBytes(long i)
         {
-            //var buf = BitConverter.GetBytes(i);
-            //var buf = new byte[8];
+            return BitConverter.GetBytes(i);
+        }
+        public static byte[] IntToBytes(int i)
+        {
             return BitConverter.GetBytes(i);
         }
         public static int GetBufSize(byte[] header)
@@ -116,35 +122,46 @@ namespace Voip
             var frameStart = 0;
             var i = 0;
 
-            while (i < buf.Length - 4)
+            var frame = 0;
+
+            while (i < buf.Length - 5)
             {
                 if (buf[i] == 0 && buf[i + 1] == 0 && buf[i + 2] == 0 && buf[i + 3] == 1) // 0001
                 {
+                    if (buf[i + 4] == 104)
+                    {
+                        i += 4;
+                        continue;
+                    }
                     if (i > 0)
                     {
                         var body = new byte[i - frameStart];
                         Array.Copy(buf, frameStart, body, 0, body.Length);
-                        list.Add(body);
-                        bodySize += body.Length;
 
+                        list.Add(body);
+
+                        bodySize += body.Length;
                     }
 
                     frameStart = i;
+                    frame++;
                     i = i + 4;
 
                     continue;
                 }
-                if (buf[i] == 0 && buf[i + 1] == 0 && buf[i + 3] == 1) // 001
+                if (buf[i] == 0 && buf[i + 1] == 0 && buf[i + 2] == 1) // 001
                 {
                     if (i > 0)
                     {
                         var body = new byte[i - frameStart];
                         Array.Copy(buf, frameStart, body, 0, body.Length);
+
                         list.Add(body);
                         bodySize += body.Length;
                     }
 
                     frameStart = i;
+                    frame++;
                     i += 3;
 
                     continue;
@@ -156,8 +173,10 @@ namespace Voip
                 var body = new byte[buf.Length - frameStart];
                 Array.Copy(buf, frameStart, body, 0, body.Length);
                 list.Add(body);
+                frame++;
                 bodySize += body.Length;
-            } 
+            }
+
             return list;
         }
 
@@ -179,7 +198,7 @@ namespace Voip
         }
         public static void ConfigureHWDecoder(out AVHWDeviceType HWtype)
         {
-            HWtype = AVHWDeviceType.AV_HWDEVICE_TYPE_NONE; 
+            HWtype = AVHWDeviceType.AV_HWDEVICE_TYPE_NONE;
             var availableHWDecoders = new Dictionary<int, AVHWDeviceType>();
             var type = AVHWDeviceType.AV_HWDEVICE_TYPE_NONE;
             var number = 1;

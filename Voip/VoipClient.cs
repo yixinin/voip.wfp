@@ -631,18 +631,20 @@ namespace Voip
                             break;
                         case 2:
                             //video
-                            var list = Util.SplitH264Buffer(body);
+                            //var list = Util.SplitH264Buffer(body);
+                            VideoH264Queue.Enqueue(new VideoH264Packet(body));
+                            //var list = Util.SplitH264Buffer(body);
 
-                            foreach (var buf in list)
-                            {
-                                var p = new VideoH264Packet(buf);
-                                if (p.IsPPS || hasPPS)
-                                {
-                                    hasPPS = true;
-                                    VideoH264Queue.Enqueue(p);
-                                }
+                            //foreach (var buf in list)
+                            //{
+                            //    var p = new VideoH264Packet(buf);
+                            //    if (p.IsPPS || hasPPS)
+                            //    {
+                            //        hasPPS = true;
+                            //        VideoH264Queue.Enqueue(p);
+                            //    }
 
-                            }
+                            //}
                             break;
                         default:
                             Debug.WriteLine("unknown buf header", header);

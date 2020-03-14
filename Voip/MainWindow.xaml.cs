@@ -27,6 +27,8 @@ using System.Windows.Shapes;
 
 namespace Voip
 {
+
+
     /// <summary>
     /// Interaction logic for MainWindow.xaml
     /// </summary>
@@ -60,6 +62,8 @@ namespace Voip
         {
             InitializeComponent();
 
+
+
             var videoQueue = new Queue<VideoH264Packet>(FPS * 10);
             VoipClient = new VoipClient(videoQueue, HOST, TCP_PORT, Id.Token, ROOM_ID);
             VoipClient.AudioBufferRecieved += VoipClient_AudioBufferRecieved;
@@ -67,8 +71,21 @@ namespace Voip
             PlayAudio();
             Task.Run(() =>
             {
-                DecodeVideo(videoQueue);
+                DecodeH264(videoQueue);
             });
+
+
+            //var ps = new string[44];
+            //var path = @"C:\Users\yixin\Pictures\Uplay\";
+            //for (var i = 1; i <= 44; i++)
+            //{
+            //    var fileName = $"frame.{i:D8}.jpg";
+            //    ps[i - 1] = path + fileName;
+            //}
+
+            //H264Encode(ps, 30);
+
+            //H264Decode(@"C:\Users\yixin\Desktop\test.avi", 30);
 
 
             Current = this;
@@ -99,8 +116,50 @@ namespace Voip
             }
         }
 
+
+
+        public unsafe void DecodeIOVideo(Queue<VideoH264Packet> videoQueue)
+        {
+            Util.ConfigureHWDecoder(out var HWDevice);
+
+            using (var vsd = new IOVideoStreamDecoder(videoQueue, HWDevice))
+            {
+                Console.WriteLine($"codec name: {vsd.CodecName}");
+                var info = vsd.GetContextInfo();
+                info.ToList().ForEach(x => Console.WriteLine($"{x.Key} = {x.Value}"));
+
+                var sourceSize = vsd.FrameSize;
+                var sourcePixelFormat = HWDevice == AVHWDeviceType.AV_HWDEVICE_TYPE_NONE ? vsd.PixelFormat : Util.GetHWPixelFormat(HWDevice);
+                var destinationSize = sourceSize;
+                var destinationPixelFormat = AVPixelFormat.AV_PIX_FMT_BGR24;
+                using (var vfc = new VideoFrameConverter(sourceSize, sourcePixelFormat, destinationSize, destinationPixelFormat))
+                {
+                    var frameNumber = 0;
+                    while (true)
+                    {
+                        if (!VoipClient.IsConnect)
+                        {
+                            continue;
+                        }
+                        vsd.TryDecodeNextFrame(out var frame);
+                        var convertedFrame = vfc.Convert(frame);
+
+                        using (var bitmap = new Bitmap(convertedFrame.width, convertedFrame.height, convertedFrame.linesize[0], System.Drawing.Imaging.PixelFormat.Format24bppRgb, (IntPtr)convertedFrame.data[0]))
+                        {
+                            ShowBitmap(bitmap, frameNumber);
+                        }
+                        frameNumber++;
+                    }
+                }
+            }
+        }
+
         public unsafe void DecodeVideo(Queue<VideoH264Packet> videoQueue)
         {
+
+            //FFMediaToolkit.Decoding.VideoStream videoStream = new FFMediaToolkit.Decoding.MediaFile.Ope
+            //var mf = FFMediaToolkit.Decoding.MediaFile.Open("");
+
             //ffmpeg.avcodec_register_all();
 
             //var vd = new VideoStreamDecoder(HWDevice)
@@ -139,6 +198,158 @@ namespace Voip
                     }
                 }
             }
+        }
+
+        private void H264Encode(string[] paths, int fps)
+        {
+            var path = paths[0];
+            if (File.Exists(path))
+            {
+                Debug.WriteLine(path);
+            }
+            var firstFrame = new Bitmap(path);
+
+            // AVIに出力するライターを作成(create AVI writer)
+            var aviPath = Environment.GetFolderPath(Environment.SpecialFolder.Desktop) + @"\test.avi";
+            var aviFile = System.IO.File.OpenWrite(aviPath);
+            var writer = new H264Writer(aviFile, firstFrame.Width, firstFrame.Height, fps);
+
+            // H264エンコーダーを作成(create H264 encoder)
+            var encoder = new OpenH264Lib.Encoder("openh264-2.0.0-win64.dll");
+
+            // 1フレームエンコードするごとにライターに書き込み(write frame data for each frame encoded)
+            OpenH264Lib.Encoder.OnEncodeCallback onEncode = (data, length, frameType) =>
+            {
+                var keyFrame = (frameType == OpenH264Lib.Encoder.FrameType.IDR) || (frameType == OpenH264Lib.Encoder.FrameType.I);
+                writer.AddImage(data, keyFrame);
+                Console.WriteLine("Encord {0} bytes, KeyFrame:{1}", length, keyFrame);
+            };
+
+            // H264エンコーダーの設定(encoder setup)
+            int bps = 5000 * 1000;         // target bitrate. 5Mbps.
+            float keyFrameInterval = 2.0f; // insert key frame interval. unit is second.
+            encoder.Setup(firstFrame.Width, firstFrame.Height, bps, fps, keyFrameInterval, onEncode);
+
+            // 1フレームごとにエンコード実施(do encode)
+            for (int i = 0; i < paths.Length; i++)
+            {
+                var bmp = new Bitmap(paths[i]);
+                encoder.Encode(bmp);
+                bmp.Dispose();
+            }
+
+            writer.Close();
+        }
+
+        private void H264Decode(string path, int fps)
+        {
+            var decoder = new OpenH264Lib.Decoder("openh264-2.0.0-win64.dll");
+
+            var aviFile = System.IO.File.OpenRead(path);
+            var buf = new byte[aviFile.Length];
+
+            var n = aviFile.Read(buf, 0, buf.Length);
+            if (n != buf.Length)
+            {
+                Debug.WriteLine("not compelete");
+            }
+            var frames = Util.SplitH264Buffer(buf);
+            foreach (var frame in frames)
+            {
+                var image = decoder.Decode(frame, frame.Length);
+                if (image == null) return;
+                ShowBitmap(image, 0);
+            }
+            //var riff = new RiffFile(aviFile);
+
+            //var frames = riff.Chunks.OfType<RiffChunk>().Where(x => x.FourCC == "00dc");
+            //var enumerator = frames.GetEnumerator();
+            //var timer = new System.Timers.Timer(1000 / fps);
+            //var index = 0;
+            //timer.Elapsed += (s, e) =>
+            //{
+            //    if (enumerator.MoveNext() == false)
+            //    {
+            //        timer.Stop();
+            //        return;
+            //    }
+
+            //    var chunk = enumerator.Current;
+            //    var frame = chunk.ReadToEnd();
+            //    Debug.WriteLine(Util.GetBufferText(frame));
+            //    var image = decoder.Decode(frame, frame.Length);
+            //    if (image == null) return;
+            //    ShowBitmap(image, index);
+            //    index++;
+            //};
+            //timer.Start();
+        }
+
+        public void DecodeH264(Queue<VideoH264Packet> videoQueue)
+        {
+            var decoder = new OpenH264Lib.Decoder("openh264-2.0.0-win64.dll");
+
+            var index = 0;
+            var hasKey = false;
+            while (true)
+            {
+                if (!VoipClient.IsConnect)
+                {
+                    continue;
+                }
+                if (videoQueue.Count > 0)
+                {
+                    var p = videoQueue.Dequeue();
+                    if (p == null)
+                    {
+                        continue;
+                    }
+                    var frames = Util.SplitH264Buffer(p.Buffer);
+                    foreach (var frame in frames)
+                    {
+                        if (frame[4] == 103 || hasKey)
+                        {
+                            if (frame[4] == 103)
+                            {
+                                hasKey = true;
+                            }
+                            var bmp = decoder.Decode(frame, frame.Length);
+                            if (bmp != null)
+                                ShowBitmap(bmp, 0);
+                        }
+
+
+                    }
+                    //var ms = new MemoryStream(p.Buffer.Length);
+                    //{
+                    //    ms.Write(p.Buffer, 0, p.Buffer.Length);
+                    //    ms.Seek(0, SeekOrigin.Begin);
+
+                    //    var riff = new RiffFile(ms); 
+
+                    //    var frames = riff.Chunks.OfType<RiffChunk>().Where(x => x.FourCC == "00dc");
+                    //    //ms.Close();
+                    //    var enumerator = frames.GetEnumerator();
+                    //    var timer = new System.Timers.Timer(1000 / 24);
+                    //    timer.Elapsed += (s, e) =>
+                    //    {
+                    //        if (enumerator.MoveNext() == false)
+                    //        {
+                    //            timer.Stop();
+                    //            return;
+                    //        }
+
+                    //        var chunk = enumerator.Current;
+                    //        var frame = chunk.ReadToEnd();
+                    //        var image = decoder.Decode(frame, frame.Length);
+                    //        if (image == null) return;
+                    //        ShowBitmap(image, 0);
+                    //    };
+                    //    timer.Start();
+                    //}
+                }
+            }
+
         }
         private unsafe void ConverMat(AVFrame convertedFrame, int frameNumber)
         {
@@ -186,12 +397,14 @@ namespace Voip
                 bmp.EndInit();
                 bmp.Freeze();
 
+                //Debug.WriteLine(i);
+
                 MessagePage.Current.Dispatcher.BeginInvoke(System.Windows.Threading.DispatcherPriority.Normal, new Action(() =>
                 {
                     MessagePage.Current.videoImage.Source = bmp;
                 }));
             }
-        } 
+        }
 
         private void VoipClient_AudioBufferRecieved(object sender, MediaBufferArgs e)
         {

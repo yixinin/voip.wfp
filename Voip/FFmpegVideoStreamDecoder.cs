@@ -12,6 +12,7 @@ namespace Voip
     public sealed unsafe class VideoStreamDecoder : IDisposable
     {
         private readonly AVCodecContext* _pCodecContext;
+        private readonly AVCodecParserContext* _pParserContext;
         //private readonly AVFormatContext* _pFormatContext;
         //private readonly int _streamIndex;
         //private readonly AVFrame* _pFrame;
@@ -28,6 +29,7 @@ namespace Voip
             AVCodec* codec = ffmpeg.avcodec_find_decoder(AVCodecID.AV_CODEC_ID_H264);
 
             _pCodecContext = ffmpeg.avcodec_alloc_context3(codec);
+            _pParserContext = ffmpeg.av_parser_init(27);
 
             if (HWDeviceType != AVHWDeviceType.AV_HWDEVICE_TYPE_NONE)
             {
@@ -79,34 +81,59 @@ namespace Voip
 
         public unsafe Int32 PutVideoStream(byte[] buffer)
         {
+            var parserLen = 0;
             try
             {
 
-                //pPacket->size = buffer.Length;//这个填入H264数据帧的大小 
-                fixed (byte* pBuffer = buffer)
+
+
+                var totalLen = buffer.Length;
+
+                while (parserLen < buffer.Length)
                 {
-                    var pPacket = ffmpeg.av_packet_alloc();
-                    ffmpeg.av_packet_from_data(pPacket, pBuffer, buffer.Length);
-                    //pPacket->data = pBuffer;
-                    //pPacket->size = buffer.Length;
-                    var flag = 0;
-                    if (buffer.Length > 5)
+                    fixed (byte* pBuffer = buffer)
                     {
-                        if (buffer[4] == 103)
+                        AVPacket* pParsePacket = ffmpeg.av_packet_alloc();
+                        
+                        var n = ffmpeg.av_parser_parse2(
+                            _pParserContext,
+                            _pCodecContext,
+                            &pParsePacket->data,
+                            &pParsePacket->size,
+                            (pBuffer + parserLen),
+                            buffer.Length - parserLen,
+                            ffmpeg.AV_NOPTS_VALUE,
+                            ffmpeg.AV_NOPTS_VALUE,
+                            ffmpeg.AV_NOPTS_VALUE);
+                        parserLen += n;
+                        var newBuffer = new byte[buffer.Length - n];
+                        Array.Copy(buffer, n, newBuffer, 0, newBuffer.Length);
+                        buffer = newBuffer;
+                        //Debug.WriteLine(Util.GetBufferText())
+
+                        //输出packet数据
+                        var buf = new byte[pParsePacket->size]; 
+                        for (var i = 0; i < buf.Length; i++)
                         {
-                            flag = 1;
+                            var b = Marshal.ReadByte((IntPtr)pParsePacket->data, i);
+                            buf[i] = b;
+                        }
+                        Debug.WriteLine(String.Format("{0}", Util.GetBufferText(buf)));
+
+                        int ret = ffmpeg.avcodec_send_packet(_pCodecContext, pParsePacket);
+                        if (ret != 0)
+                        {
+                            Debug.WriteLine(ret);
                         }
                     }
-                    pPacket->flags = flag;
-
-
-                    int ret = ffmpeg.avcodec_send_packet(_pCodecContext, pPacket);
-                    return ret;
                 }
+
+
+                return -1;
             }
             catch (Exception ex)
             {
-                //Debug.WriteLine(string.Format("PutVideoStream Ex:{0}", ex));
+                Debug.WriteLine(string.Format("PutVideoStream Ex:{0}", ex));
                 return -1;
             }
         }
@@ -119,45 +146,29 @@ namespace Voip
             var _pFrame = ffmpeg.av_frame_alloc();
             var _receivedFrame = ffmpeg.av_frame_alloc();
 
-            while (true)
+
+            try
             {
-                try
+                if (videoQueue.Count > 0)
                 {
-                    if (videoQueue.Count <= 0)
-                    {
-                        continue;
-                    }
-
                     var p = videoQueue.Dequeue();
-                    if (p == null)
+                    if (p != null)
                     {
-                        continue;
+                        error = PutVideoStream(p.Buffer);
+                        if (error != 0)
+                        {
+                            error.ThrowExceptionIfError();
+                            //Debug.WriteLine(string.Format("try put packet err: {0}", error));
+                        }
                     }
-                    if (p.Buffer == null)
-                    {
-                        continue;
-                    }
-                    if (p.Buffer.Length == 0)
-                    {
-                        continue;
-                    }
-                    //Debug.WriteLine(Util.GetBufferText(p.Buffer));
-                    //continue;
-
-                    error = PutVideoStream(p.Buffer);
-                    if (error != 0)
-                    {
-                        Debug.WriteLine(string.Format("try put packet err: {0}", error));
-                    }
-                    break;
-                    //error.ThrowExceptionIfError();
                 }
-                catch (Exception ex)
-                {
-                    Debug.WriteLine(string.Format("try put packet ex: {0}", ex));
-                }
-
             }
+            catch (Exception ex)
+            {
+                Debug.WriteLine(string.Format("try put packet ex: {0}", ex));
+            }
+
+
 
 
 
