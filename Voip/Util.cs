@@ -196,6 +196,18 @@ namespace Voip
                 frameBitmap.UnlockBits(bitmapData);
             }
         }
+        public static void copy(float[] x, int x_offset, float[] y, int L)
+        {
+            copy(x, x_offset, y, 0, L);
+        }
+
+        public static void copy(float[] x, int x_offset, float[] y, int y_offset, int L)
+        {
+            int i;
+
+            for (i = 0; i < L; i++)
+                y[y_offset + i] = x[x_offset + i];
+        }
 
 
     }
