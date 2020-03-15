@@ -22,6 +22,7 @@ using System.Windows.Media;
 using System.Windows.Media.Imaging;
 using System.Windows.Navigation;
 using System.Windows.Shapes;
+using Voip.G729;
 //using Windows.Media.Capture.Frames;
 //using OpenCvSharp;
 
@@ -53,6 +54,7 @@ namespace Voip
 
         public WaveOut audioPlayer;
         public BufferedWaveProvider audioProvider;
+        public G729Decoder AudioDecodder;
 
         //public VideoStreamDecoder VideoDecoder;
 
@@ -68,6 +70,7 @@ namespace Voip
             VoipClient = new VoipClient(videoQueue, HOST, TCP_PORT, Id.Token, ROOM_ID);
             VoipClient.AudioBufferRecieved += VoipClient_AudioBufferRecieved;
             //VoipClient.VideoBufferRecieved += VoipClient_VideoBufferRecieved;
+            AudioDecodder = new G729Decoder();
             PlayAudio();
             Task.Run(() =>
             {
@@ -195,8 +198,8 @@ namespace Voip
 
         private void VoipClient_AudioBufferRecieved(object sender, MediaBufferArgs e)
         {
-
-            audioProvider.AddSamples(e.Buffer, 0, e.Buffer.Length);
+            var buf = AudioDecodder.Process(e.Buffer);
+            audioProvider.AddSamples(buf, 0, buf.Length);
 
             //Debug.WriteLine("recieved audio buffer", e.Buffer.Length);
         }

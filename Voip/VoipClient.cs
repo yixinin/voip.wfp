@@ -12,6 +12,7 @@ using System.Net.Sockets;
 using System.Text;
 using System.Threading;
 using System.Threading.Tasks;
+using Voip.G729;
 
 namespace Voip
 {
@@ -103,6 +104,8 @@ namespace Voip
         public Queue<byte[]> videoPacketQueue;
 
         public Queue<VideoH264Packet> VideoH264Queue { get; set; }
+
+        private G729Encoder AudioEncoder { get; set; }
 
         public VoipClient(Queue<VideoH264Packet> q, string host, short port, string token, long roomId, int fps = 24)
         {
@@ -361,7 +364,7 @@ namespace Voip
             }
             try
             {
-
+                AudioEncoder = new G729Encoder();
                 audioQueue = new Queue<AudioPacket>();
                 this._audioCapture = new WaveIn();
                 //var waveFormat = new WaveFormat(AudioRate, AudioBits, AudioChannels);
@@ -394,7 +397,8 @@ namespace Voip
 
         private void _audioCapture_DataAvailable(object sender, WaveInEventArgs e)
         {
-            audioQueue.Enqueue(new AudioPacket(e.Buffer));
+            var buf = AudioEncoder.Process(e.Buffer);
+            audioQueue.Enqueue(new AudioPacket(buf));
         }
 
         private void _audioCapture_RecordingStopped(object sender, StoppedEventArgs e)
@@ -419,36 +423,25 @@ namespace Voip
         {
             while (AudioOn)
             {
-                var total = 1;
-                var bodySize = 0;
-                var ps = new AudioPacket[total];
-                for (var i = 0; i < total; i++)
+
+                if (audioQueue.Count > 0)
                 {
-                    while (audioQueue.Count <= 0)
-                    {
-                        Task.Delay(1).Wait();
-                    }
                     var p = audioQueue.Dequeue();
-                    ps[i] = p;
-                    bodySize += p.Data.Length;
+                    if (p == null)
+                    {
+                        continue;
+                    }
+
+                    var buf = Util.GetAudioBuffer(p.Data);
+                    var n = _socketConn.Send(buf);
+                    if (n != buf.Length)
+                    {
+                        Debug.WriteLine(string.Format("error: audio buf send, n={0}, bodySize={1}", n, p.Data.Length));
+                    }
+                    Debug.WriteLine(string.Format("audio ->{0}", p.Data.Length));
                 }
 
 
-                //每秒发送一个包
-                var body = new byte[bodySize];
-                var writed = 0;
-                foreach (var p in ps)
-                {
-                    Array.Copy(p.Data, 0, body, writed, p.Data.Length);
-                    writed += p.Data.Length;
-                }
-                var buf = Util.GetAudioBuffer(body);
-                var n = _socketConn.Send(buf);
-                if (n != buf.Length)
-                {
-                    Debug.WriteLine(string.Format("error: audio buf send, n={0}, bodySize={1}", n, bodySize));
-                }
-                //Debug.WriteLine(string.Format("audio samples:{0}, size:{1}", ps.Length, buf.Length));
             }
         }
 
@@ -478,7 +471,7 @@ namespace Voip
                     {
                         Debug.WriteLine(string.Format("error: video buf send, n={0}, bodySize={1}", n, body.Length));
                     }
-                    Debug.WriteLine(string.Format("{0}->{1}", body.Length, Util.GetBufferText(Util.GetVideoHeader(body.Length))));
+                    Debug.WriteLine(string.Format("video -> {0}", body.Length));
                 }
 
             }
@@ -488,7 +481,8 @@ namespace Voip
             VideoH264Queue.Enqueue(new VideoH264Packet(body));
         }
 
-        
+
+
         private void EncodeH264()
         {
             // H264エンコーダーを作成(create H264 encoder)
@@ -576,7 +570,7 @@ namespace Voip
                         case 2:
 
                             VideoH264Queue.Enqueue(new VideoH264Packet(body));
-                            
+
                             break;
                         default:
                             Debug.WriteLine("unknown buf header", header);

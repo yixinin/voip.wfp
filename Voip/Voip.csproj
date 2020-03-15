@@ -135,6 +135,37 @@
       <SubType>Designer</SubType>
     </ApplicationDefinition>
     <Compile Include="AviWriter.cs" />
+    <Compile Include="G729\Codec\AcelpCo.cs" />
+    <Compile Include="G729\Codec\Bits.cs" />
+    <Compile Include="G729\Codec\CodLd8k.cs" />
+    <Compile Include="G729\Codec\CorFunc.cs" />
+    <Compile Include="G729\Codec\DeAcelp.cs" />
+    <Compile Include="G729\Codec\DecGain.cs" />
+    <Compile Include="G729\Codec\DecLag3.cs" />
+    <Compile Include="G729\Codec\DecLd8k.cs" />
+    <Compile Include="G729\Codec\Filter.cs" />
+    <Compile Include="G729\Codec\FloatReference.cs" />
+    <Compile Include="G729\Codec\Gainpred.cs" />
+    <Compile Include="G729\Codec\IntReference.cs" />
+    <Compile Include="G729\Codec\Ld8k.cs" />
+    <Compile Include="G729\Codec\Lpc.cs" />
+    <Compile Include="G729\Codec\Lpcfunc.cs" />
+    <Compile Include="G729\Codec\Lspdec.cs" />
+    <Compile Include="G729\Codec\Lspgetq.cs" />
+    <Compile Include="G729\Codec\Pitch.cs" />
+    <Compile Include="G729\Codec\Postfil.cs" />
+    <Compile Include="G729\Codec\PostPro.cs" />
+    <Compile Include="G729\Codec\PParity.cs" />
+    <Compile Include="G729\Codec\PredLt3.cs" />
+    <Compile Include="G729\Codec\PreProc.cs" />
+    <Compile Include="G729\Codec\Pwf.cs" />
+    <Compile Include="G729\Codec\QuaGain.cs" />
+    <Compile Include="G729\Codec\QuaLsp.cs" />
+    <Compile Include="G729\Codec\TabLd8k.cs" />
+    <Compile Include="G729\Codec\Taming.cs" />
+    <Compile Include="G729\Codec\Util.cs" />
+    <Compile Include="G729\G729Decoder.cs" />
+    <Compile Include="G729\G729Encoder.cs" />
     <Compile Include="GroupPage.xaml.cs">
       <DependentUpon>GroupPage.xaml</DependentUpon>
     </Compile>
