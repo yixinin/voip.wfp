@@ -35,41 +35,41 @@ namespace Voip
         public MessagePage()
         {
             InitializeComponent();
-            
-            Current = this; 
+            MessageList = new ObservableCollection<UserMessage>();
+            msgListView.DataContext = MessageList;
+            Current = this;
         }
 
         public void Init()
         {
-            MessageList = new ObservableCollection<UserMessage>();
-            msgListView.DataContext = MessageList;
-            var bmp = new BitmapImage();
-            bmp.BeginInit();
-            bmp.UriSource = new Uri(Avatar);
-            bmp.EndInit();
-            var msg1 = new UserMessage
-            {
-                Text = "lkjhgfdsa",
-                CreateTime = DateTime.Now.ToString(),
-                Horizon = HorizontalAlignment.Right,
-                Avatar = bmp,
-                AvatarCol = 1,
-                MessageCol = 0,
-            };
-            var msg2 = new UserMessage
-            {
-                Text = "asdfghjkl",
-                CreateTime = DateTime.Now.ToString(),
-                Horizon = HorizontalAlignment.Left,
-                Avatar = bmp,
-                AvatarCol = 0,
-                MessageCol = 1,
-            };
-            MessageList.Add(msg1);
-            MessageList.Add(msg2);
+
+            //var bmp = new BitmapImage();
+            //bmp.BeginInit();
+            //bmp.UriSource = new Uri(Avatar);
+            //bmp.EndInit();
+            //var msg1 = new UserMessage
+            //{
+            //    Text = "lkjhgfdsa",
+            //    CreateTime = DateTime.Now.ToString(),
+            //    Horizon = HorizontalAlignment.Right,
+            //    Avatar = bmp,
+            //    AvatarCol = 1,
+            //    MessageCol = 0,
+            //};
+            //var msg2 = new UserMessage
+            //{
+            //    Text = "asdfghjkl",
+            //    CreateTime = DateTime.Now.ToString(),
+            //    Horizon = HorizontalAlignment.Left,
+            //    Avatar = bmp,
+            //    AvatarCol = 0,
+            //    MessageCol = 1,
+            //};
+            //MessageList.Add(msg1);
+            //MessageList.Add(msg2);
         }
 
-        
+
 
 
         async private void callVideoBtn_Click(object sender, RoutedEventArgs e)
@@ -81,6 +81,15 @@ namespace Voip
 
             //videoImage.Source = new BitmapImage();
 
+            var req = new Protocol.RealTimeReq
+            {
+                 ContactId = 1,
+            };
+            ChatWindow.Current.CellnetClient.Send(req);
+        }
+
+        private void GotoVideoWindow()
+        {
             //创建voipwindow
             var voipWindow = new VoipWindow();
             voipWindow.nicknameText.Text = nicknameTb.Text;
@@ -97,7 +106,7 @@ namespace Voip
     public class UserMessage
     {
         public string Text { get; set; }
-        public BitmapImage Avatar { get; set; }
+        public string Avatar { get; set; }
         public string CreateTime { get; set; }
 
         public HorizontalAlignment Horizon { get; set; }

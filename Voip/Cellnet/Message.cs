@@ -39,7 +39,8 @@ namespace Voip.Cellnet
             ts.Add(typeof(Protocol.CancelRealTimeAck));
             ts.Add(typeof(Protocol.PollAck));
             ts.Add(typeof(Protocol.PollMessageAck));
-
+            ts.Add(typeof(Protocol.GetMessageUserAck));
+            ts.Add(typeof(Protocol.GetMessageAck));
 
             //account
             ts.Add(typeof(Protocol.SignInAck));

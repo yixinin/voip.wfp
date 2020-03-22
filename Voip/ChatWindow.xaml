@@ -29,8 +29,8 @@
             <!--<StackPanel HorizontalAlignment="Center" VerticalAlignment="Center" Orientation="Horizontal">
                 <Button>消息</Button>
             </StackPanel>-->
-                
-            
+
+
         </Grid>
 
         <Grid Grid.Row="1">
@@ -40,47 +40,89 @@
             </Grid.ColumnDefinitions>
             <!--消息列表-->
             <Grid Background="#FFF2F2F2">
-                <ListView x:Name="msgListView" SelectionChanged="msgListView_SelectionChanged" ItemsSource="{Binding}">
-                    <ListView.ItemTemplate>
-                        <DataTemplate>
-                            <Grid>
-                                <Grid.ColumnDefinitions>
-                                    <ColumnDefinition Width="*" />
-                                    <ColumnDefinition Width="3*" />
-                                </Grid.ColumnDefinitions>
-
-                                <!--头像-->
-                                <Grid>
-                                    <Ellipse   
-                                        HorizontalAlignment="Right"
-                                        Width="40"
-                                        Margin="10,5"
-                                        Height="40"  
-                                        VerticalAlignment="Top"               
-                                        StrokeThickness="2"
-                                        >
-                                        <Ellipse.Fill>
-                                            <ImageBrush ImageSource="{Binding Path=Avatar}"/>
-                                        </Ellipse.Fill>
-                                    </Ellipse>
-                                </Grid>
-
-                                <!--昵称和id-->
-                                <Grid Grid.Column="1"  >
-                                    <Grid.RowDefinitions>
-                                        <RowDefinition Height="4*"/>
-                                        <RowDefinition Height="*" />
-                                        <RowDefinition Height="4*"/>
-                                    </Grid.RowDefinitions>
-                                    <TextBlock VerticalAlignment="Bottom" Text="{Binding Path=Nickname}"   />
-                                    <TextBlock Grid.Row="2" VerticalAlignment="Top"   Text="{Binding Path=Message}" FontSize="10"/>
-                                </Grid>
-
+                <TabControl Margin="0" HorizontalContentAlignment="Stretch" VerticalContentAlignment="Stretch"> 
+                    <TabItem Margin="0">
+                        <TabItem.Header>
+                            <Grid HorizontalAlignment="Stretch">
+                                <TextBlock Text="消息" />
                             </Grid>
-                        </DataTemplate>
-                    </ListView.ItemTemplate>
+                        </TabItem.Header>
+                        <ListView x:Name="msgListView" Margin="-3" SelectionChanged="msgListView_SelectionChanged" ItemsSource="{Binding}">
+                            <ListView.ItemTemplate>
+                                <DataTemplate>
+                                    <Grid>
+                                        <Grid.ColumnDefinitions>
+                                            <ColumnDefinition Width="*" />
+                                            <ColumnDefinition Width="3*" />
+                                        </Grid.ColumnDefinitions>
 
-                </ListView>
+                                        <!--头像-->
+                                        <Grid>
+                                            <Ellipse   
+                                                HorizontalAlignment="Right"
+                                                Width="40"
+                                                Margin="10,5"
+                                                Height="40"  
+                                                VerticalAlignment="Top"               
+                                                StrokeThickness="2"
+                                                >
+                                                <Ellipse.Fill>
+                                                    <ImageBrush ImageSource="{Binding Path=Avatar}"/>
+                                                </Ellipse.Fill>
+                                            </Ellipse>
+                                        </Grid>
+
+                                        <!--昵称和id-->
+                                        <Grid Grid.Column="1"  >
+                                            <Grid.RowDefinitions>
+                                                <RowDefinition Height="4*"/>
+                                                <RowDefinition Height="*" />
+                                                <RowDefinition Height="4*"/>
+                                            </Grid.RowDefinitions>
+                                            <TextBlock VerticalAlignment="Bottom" Text="{Binding Path=Nickname}"   />
+                                            <TextBlock Grid.Row="2" VerticalAlignment="Top"   Text="{Binding Path=Message}" FontSize="10"/>
+                                        </Grid>
+
+                                    </Grid>
+                                </DataTemplate>
+                            </ListView.ItemTemplate>
+
+                        </ListView>
+                    </TabItem>
+                    <TabItem >
+                        <TabItem.Header>
+                            <Grid>
+                                <TextBlock Text="联系人" />
+                            </Grid>
+                        </TabItem.Header>
+                        <Grid>
+                            <ListView x:Name="contactListView" SelectionChanged="contactListView_SelectionChanged"  Margin="-3" ItemsSource="{Binding}">
+                                <ListView.ItemTemplate>
+                                    <DataTemplate>
+                                        <StackPanel Orientation="Horizontal" >
+                                            <Ellipse   
+                                            HorizontalAlignment="Right"
+                                            Width="40"
+                                            Margin="10,5"
+                                            Height="40"  
+                                            VerticalAlignment="Top"               
+                                            StrokeThickness="2"
+                                            >
+                                                <Ellipse.Fill>
+                                                    <ImageBrush ImageSource="{Binding Path=Avatar}"/>
+                                                </Ellipse.Fill>
+                                            </Ellipse>
+                                            <TextBlock VerticalAlignment="Center" Text="{Binding Path=Nickname}"/>
+                                        </StackPanel>
+                                    </DataTemplate>
+                                </ListView.ItemTemplate>
+
+                            </ListView>
+                            <Button x:Name="addContactBtn" Click="addContactBtn_Click" Margin="20" Width="30" Height="30" VerticalAlignment="Bottom" HorizontalAlignment="Right">添加</Button>
+                        </Grid>
+                       
+                    </TabItem>
+                </TabControl>
             </Grid>
             <Frame x:Name="msgFrame"  Grid.Column="1"></Frame>
         </Grid>

@@ -71,10 +71,11 @@ namespace Voip.Cellnet
 
             try
             {
+
                 var endPoint = new IPEndPoint(IPAddress.Parse(this.Host), this.Port);
                 this._tcpSocker.ConnectAsync(endPoint).ContinueWith(_Activator =>
                 {
-
+                    //_tcpSocker.Send(new byte[0]);
                     Task.Run(() =>
                     {
                         ReceiveMessage();
@@ -120,7 +121,7 @@ namespace Voip.Cellnet
 
                     var hashid = Utils.StringHash(message.GetType().FullName.ToLower());
                     var ids = Utils.IntToBitConverter(hashid);
-                    var lens = Utils.IntToBitConverter((UInt16)(data.Length + HEADER_SIZE));
+                    var lens = Utils.IntToBitConverter((UInt16)(data.Length + HEADER_SIZE-2));
                     for (var i = 0; i < 2; i++)
                     {
                         buffer[i] = lens[i];
@@ -193,9 +194,9 @@ namespace Voip.Cellnet
                     var msgId = BitConverter.ToUInt16(ids, 0);
 
                     var len = Utils.BitToShort(lens);
-                    var message = new byte[len -2];
+                    var message = new byte[len - 2];
                     n = _tcpSocker.Receive(message);
-                    if (n != message.Length )
+                    if (n != message.Length)
                     {
                         Debug.WriteLine("read msg body fail" + Util.GetBufferText(header));
                         continue;

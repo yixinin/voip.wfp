@@ -27,12 +27,26 @@ namespace Voip
         private string TCP_HOST = "10.0.0.218";
         private int TCP_PORT = 8180;
         private bool isSignUp = false;
+
+
+        List<UserMessageItem> users = new List<UserMessageItem>();
+
+        public string Token { get; private set; }
+
         public MainWindow()
         {
             InitializeComponent();
             Cellnet.Message.InitMessageIds();
             //读取设置
             UserInfo = new UserInfo();
+            if (UserInfo.Username != null && UserInfo.Username != "")
+            {
+                uname.Text = UserInfo.Username;
+                pwd.Password = UserInfo.Password;
+                autoSignCheck.IsChecked = UserInfo.AutoSign == "1";
+                remberCheck.IsChecked = UserInfo.Remember == "1";
+            }
+
 
             cellnetClient = new Cellnet.CellnetClient(TCP_HOST, TCP_PORT);
 
@@ -61,8 +75,8 @@ namespace Voip
         }
 
         async private void signInBtn_Click(object sender, RoutedEventArgs e)
-        { 
-            UserInfo.Password = uname.Text;
+        {
+            UserInfo.Password = pwd.Password;
             if (isSignUp)
             {
                 await cellnetClient.Send(new Protocol.SignUpReq
@@ -70,8 +84,8 @@ namespace Voip
                     Header = new Protocol.ReqHeader(),
                     Username = uname.Text,
                     Password = UserInfo.Password,
-                    DeviceCode = Util.GetDeviceCode(),
-                    DeviceType = 2, 
+                    DeviceCode = UserInfo.DeviceCode == "" ? Util.GetDeviceCode() : UserInfo.DeviceCode,
+                    DeviceType = 2,
                 });
             }
             else
@@ -91,15 +105,14 @@ namespace Voip
 
         public void CellnetClient_OnMessage(System.Net.Sockets.Socket sender, Cellnet.SocketMessageEventArgs args)
         {
-
             var t = Cellnet.Message.messages[args.MessaeId];
             if (t.FullName == typeof(Protocol.SignInAck).FullName)
             {
                 var msg = Protocol.SignInAck.Parser.ParseFrom(args.Buffer);
                 if (msg.Header.Code == 200 && msg.Token != null && msg.Token != "")
                 {
-                    GotoChat(msg.Token);
-                    return;
+                    Token = msg.Token;
+                    GetMessageUsers(Token);
                 }
 
             }
@@ -109,42 +122,73 @@ namespace Voip
                 if (msg.Header.Code == 200 && msg.Token != null && msg.Token != "")
                 {
                     UserInfo.DeviceCode = msg.DeviceCode;
-                    GotoChat(msg.Token);
-                    return;
+                    Token = msg.Token;
+                    GetMessageUsers(Token);
                 }
             }
-
-            var token = "asdasdas";
-
-            //登录成功
-            if (token != "")
+            else if (t.FullName == typeof(Protocol.GetMessageUserAck).FullName)
             {
-                //登录成功
-                //记住密码  
-                if (remberCheck.IsChecked.HasValue)
+                var msg = Protocol.GetMessageUserAck.Parser.ParseFrom(args.Buffer);
+                if (msg.Header.Code == 200 && msg.Users != null)
                 {
-                    UserInfo.Remember = remberCheck.IsChecked.Value ? "1" : "0";
-                }
-                if (autoSignCheck.IsChecked.HasValue)
-                {
-                    UserInfo.Remember = "1";
-                    UserInfo.AutoSign = autoSignCheck.IsChecked.Value ? "1" : "0";
-                }
-                UserInfo.UpdateCache(uname.Text);
+                    foreach (var user in msg.Users)
+                    {
+                        users.Add(new UserMessageItem
+                        {
+                            Avatar = user.Avatar,
+                            Message = user.Messages.FirstOrDefault()?.Text,
+                            Nickname = user.Nickname,
+                            UserId = user.UserId,
+                        });
+                    }
 
+                    GotoChat();
 
+                }
             }
-
         }
 
-        public void GotoChat(string token)
+        public void GetMessageUsers(string token)
         {
+            var req = new Protocol.GetMessageUserReq
+            {
+                Header = new Protocol.ReqHeader { Token = token },
+            };
+            cellnetClient.Send(req);
+        }
+
+        public void GotoChat( )
+        {
+           
 
             Dispatcher.BeginInvoke(System.Windows.Threading.DispatcherPriority.Normal, new Action(() =>
             {
+
+                //登录成功
+                if (Token != "")
+                {
+                    //登录成功
+                    //记住密码  
+                    if (remberCheck.IsChecked.HasValue)
+                    {
+                        UserInfo.Remember = remberCheck.IsChecked.Value ? "1" : "0";
+                    }
+                    if (autoSignCheck.IsChecked.HasValue)
+                    {
+                        UserInfo.Remember = "1";
+                        UserInfo.AutoSign = autoSignCheck.IsChecked.Value ? "1" : "0";
+                    }
+                    UserInfo.UpdateCache(uname.Text);
+
+                }
+
                 //跳转到主界面
                 var chatPage = new ChatWindow();
-                chatPage.Token = token;
+                foreach(var item in users)
+                {
+                    chatPage.MessageUsers.Add(item);
+                }
+                chatPage.Token = Token;
                 var bmp = new BitmapImage();
                 bmp.BeginInit();
                 var avatar = UserInfo.Avatar;
@@ -163,9 +207,13 @@ namespace Voip
                 cellnetClient.OnMessage -= CellnetClient_OnMessage;
                 this.cellnetClient = null;
                 this.Close();
-            })); 
+            }));
         }
 
+        private void autoSignCheck_Checked(object sender, RoutedEventArgs e)
+        {
+            remberCheck.IsChecked = true;
+        }
     }
 
 
@@ -179,13 +227,16 @@ namespace Voip
         public string Avatar { get; set; }
         public string DeviceCode { get; set; }
 
+        public string Username { get; set; }
+
 
         public UserInfo(string username = "")
         {
             if (username == "")
             {
-                //读取默认用户
-                username = Util.GetDefaultUserName();
+                //读取默认用户 
+                Username = Util.GetDefaultUserName();
+                username = Username;
             }
             //读取设置
             //this.Username = Util.GetSettingString(Util.Username,username);

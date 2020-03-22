@@ -24,6 +24,13 @@ namespace Voip
         public const string DeviceCode = "device";
 
 
+        public static DateTime TsToTime(long ts)
+        {
+            System.DateTime dateTime = new System.DateTime(1970, 1, 1, 0, 0, 0, 0);
+            dateTime = dateTime.AddMilliseconds(ts).ToLocalTime();
+            return dateTime;
+        }
+
         public static string GetDefaultUserName()
         {
             try
