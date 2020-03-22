@@ -1,8 +1,4 @@
-﻿
-
-using NAudio.Wave;
-using OpenCvSharp;
-using OpenCvSharp.Extensions;
+﻿using NAudio.Wave;
 using System;
 using System.Collections.Generic;
 using System.Diagnostics;
@@ -10,7 +6,6 @@ using System.Drawing;
 using System.Drawing.Imaging;
 using System.IO;
 using System.Linq;
-using System.Runtime.InteropServices;
 using System.Text;
 using System.Threading.Tasks;
 using System.Windows;
@@ -20,54 +15,36 @@ using System.Windows.Documents;
 using System.Windows.Input;
 using System.Windows.Media;
 using System.Windows.Media.Imaging;
-using System.Windows.Navigation;
 using System.Windows.Shapes;
 using Voip.G729;
-//using Windows.Media.Capture.Frames;
-//using OpenCvSharp;
 
 namespace Voip
 {
-
-
     /// <summary>
-    /// Interaction logic for MainWindow.xaml
+    /// VoipWindow.xaml 的交互逻辑
     /// </summary>
-    public partial class MainWindow : System.Windows.Window
+    public partial class VoipWindow : Window
     {
-
-        public static MainWindow Current { get; set; }
-
-        const string HOST = "10.0.0.218";
-        const short TCP_PORT = 9901;
-        const string WsAddr = "ws://localhost:9902/live";
-        const string PROTOCOL = "tcp";
+        public string avatarUrl;
+        public string nickname;
+        public string Host { get; set; }
+        public short Port { get; set; }
+        public int RoomId { get; set; }
 
         const int FPS = 24;
 
-        //const string TOKEN = "00000000000000000000000000000000";
-        const long ROOM_ID = 10240;
 
         public VoipClient VoipClient;
-
-
-
         public WaveOut audioPlayer;
         public BufferedWaveProvider audioProvider;
         public G729Decoder AudioDecodder;
 
-        //public VideoStreamDecoder VideoDecoder;
-
-        //public Queue<VideoH264Packet> videoQueue;
-
-        public MainWindow()
+        public VoipWindow()
         {
             InitializeComponent();
 
-
-
             var videoQueue = new Queue<VideoH264Packet>(FPS * 10);
-            VoipClient = new VoipClient(videoQueue, HOST, TCP_PORT, Id.Token, ROOM_ID);
+            VoipClient = new VoipClient(videoQueue, Host, Port, "", RoomId);
             VoipClient.AudioBufferRecieved += VoipClient_AudioBufferRecieved;
             //VoipClient.VideoBufferRecieved += VoipClient_VideoBufferRecieved;
             AudioDecodder = new G729Decoder();
@@ -89,10 +66,27 @@ namespace Voip
             //H264Encode(ps, 30);
 
             //H264Decode(@"C:\Users\yixin\Desktop\test.avi", 30);
-
-
-            Current = this;
         }
+
+        private void hungBtn_Click(object sender, RoutedEventArgs e)
+        {
+
+
+            //结束通话
+            //TODO 发送结束请求
+
+            //断开tcp连接
+            if (VoipClient != null)
+            {
+                VoipClient.Disconnect();
+            }
+           
+            //关闭窗口
+            this.Close();
+        }
+
+
+
 
         public void PlayAudio()
         {
@@ -120,6 +114,16 @@ namespace Voip
         }
 
 
+        private void VoipClient_AudioBufferRecieved(object sender, MediaBufferArgs e)
+        {
+            var buf = AudioDecodder.Process(e.Buffer);
+            audioProvider.AddSamples(buf, 0, buf.Length);
+
+            //Debug.WriteLine("recieved audio buffer", e.Buffer.Length);
+        }
+
+
+
         public void DecodeH264(Queue<VideoH264Packet> videoQueue)
         {
             var decoder = new OpenH264Lib.Decoder("openh264-2.0.0-win64.dll");
@@ -131,6 +135,10 @@ namespace Voip
                 if (!VoipClient.IsConnect)
                 {
                     continue;
+                }
+                if (videoQueue == null)
+                {
+                    return;
                 }
                 if (videoQueue.Count > 0)
                 {
@@ -150,25 +158,19 @@ namespace Voip
                             }
                             var bmp = decoder.Decode(frame, frame.Length);
                             if (bmp != null)
+                            {
                                 ShowBitmap(bmp, 0);
+                                index++; 
+                            }
+                                
                         }
-
-
                     }
 
                 }
             }
 
         }
-
-        private void SaveToFile(Bitmap bitmap, int frameNumber)
-        {
-            var path = $"C:\\Users\\yixin\\Pictures\\Uplay\\frame{frameNumber:D8}.jpg";
-            bitmap.Save(path, ImageFormat.Jpeg);
-            Debug.WriteLine(path);
-        }
-
-
+         
         private void ShowBitmap(Bitmap bitmap, int i)
         {
             using (MemoryStream stream = new MemoryStream())
@@ -189,19 +191,12 @@ namespace Voip
 
                 //Debug.WriteLine(i);
 
-                MessagePage.Current.Dispatcher.BeginInvoke(System.Windows.Threading.DispatcherPriority.Normal, new Action(() =>
+                Dispatcher.BeginInvoke(System.Windows.Threading.DispatcherPriority.Normal, new Action(() =>
                 {
-                    MessagePage.Current.videoImage.Source = bmp;
+                    videoImg.Source = bmp;
                 }));
             }
         }
 
-        private void VoipClient_AudioBufferRecieved(object sender, MediaBufferArgs e)
-        {
-            var buf = AudioDecodder.Process(e.Buffer);
-            audioProvider.AddSamples(buf, 0, buf.Length);
-
-            //Debug.WriteLine("recieved audio buffer", e.Buffer.Length);
-        }
     }
 }

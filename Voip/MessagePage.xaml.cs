@@ -1,6 +1,7 @@
 ﻿
 using System;
 using System.Collections.Generic;
+using System.Collections.ObjectModel;
 using System.IO;
 using System.Linq;
 using System.Text;
@@ -14,6 +15,7 @@ using System.Windows.Media;
 using System.Windows.Media.Imaging;
 using System.Windows.Navigation;
 using System.Windows.Shapes;
+using Voip.Cellnet;
 
 namespace Voip
 {
@@ -23,21 +25,85 @@ namespace Voip
     public partial class MessagePage : Page
     {
         public static MessagePage Current { get; set; }
+
+        public ObservableCollection<UserMessage> MessageList;
+
+        public string Avatar { get; set; }
+
+
+
         public MessagePage()
         {
             InitializeComponent();
-            Current = this;
+            
+            Current = this; 
         }
+
+        public void Init()
+        {
+            MessageList = new ObservableCollection<UserMessage>();
+            msgListView.DataContext = MessageList;
+            var bmp = new BitmapImage();
+            bmp.BeginInit();
+            bmp.UriSource = new Uri(Avatar);
+            bmp.EndInit();
+            var msg1 = new UserMessage
+            {
+                Text = "lkjhgfdsa",
+                CreateTime = DateTime.Now.ToString(),
+                Horizon = HorizontalAlignment.Right,
+                Avatar = bmp,
+                AvatarCol = 1,
+                MessageCol = 0,
+            };
+            var msg2 = new UserMessage
+            {
+                Text = "asdfghjkl",
+                CreateTime = DateTime.Now.ToString(),
+                Horizon = HorizontalAlignment.Left,
+                Avatar = bmp,
+                AvatarCol = 0,
+                MessageCol = 1,
+            };
+            MessageList.Add(msg1);
+            MessageList.Add(msg2);
+        }
+
+        
+
 
         async private void callVideoBtn_Click(object sender, RoutedEventArgs e)
         {
-            var voipClient = MainWindow.Current.VoipClient;
-            await voipClient.ConnectAsync("tcp");
-            voipClient.CaptureAudio();
-            voipClient.CaptureVideo();
+            //var voipClient = ChatWindow.Current.VoipClient;
+            //await voipClient.ConnectAsync("tcp");
+            //voipClient.CaptureAudio();
+            //voipClient.CaptureVideo();
 
-            videoImage.Source = new BitmapImage();
+            //videoImage.Source = new BitmapImage();
+
+            //创建voipwindow
+            var voipWindow = new VoipWindow();
+            voipWindow.nicknameText.Text = nicknameTb.Text;
+            var bmp = new BitmapImage();
+            bmp.BeginInit();
+            bmp.UriSource = new Uri(Avatar);
+            bmp.EndInit();
+            voipWindow.avatarImg.ImageSource = bmp;
+            voipWindow.Show();
         }
+
+    }
+
+    public class UserMessage
+    {
+        public string Text { get; set; }
+        public BitmapImage Avatar { get; set; }
+        public string CreateTime { get; set; }
+
+        public HorizontalAlignment Horizon { get; set; }
+
+        public int AvatarCol { get; set; }
+        public int MessageCol { get; set; }
 
     }
 }

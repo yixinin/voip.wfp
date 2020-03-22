@@ -7,43 +7,39 @@ using System.Threading.Tasks;
 namespace Voip
 {
     public class RiffFile : RiffList
-    {
-        /// <summary>このファイルに含まれるチャンクを列挙する。RiffChunk型かRiffList型で取得する。</summary>
-        /// <remarks>読み込み用に開いた場合のみ利用可能。</remarks>
+    {  
         public IEnumerable<RiffBase> Chunks
         {
             get
             {
-                var origin = BaseStream.Position; // はじめの場所を覚えておく
+                var origin = BaseStream.Position;  
                 var reader = new System.IO.BinaryReader(BaseStream);
 
                 while (BaseStream.Position != BaseStream.Length)
                 {
-                    if (BaseStream.Length - BaseStream.Position < 4) break;   // fourCCを読めるか
-                    var fourCC = ToFourCC(reader.ReadInt32());                // fourCCを覗き見
-                    reader.BaseStream.Seek(-4, System.IO.SeekOrigin.Current); // fourCCぶん戻す
+                    if (BaseStream.Length - BaseStream.Position < 4) break;    
+                    var fourCC = ToFourCC(reader.ReadInt32());                 
+                    reader.BaseStream.Seek(-4, System.IO.SeekOrigin.Current);  
                     var item = (fourCC == "LIST") ? new RiffList(BaseStream) : new RiffChunk(BaseStream) as RiffBase;
                     if (item.Broken) break;
 
                     yield return item;
 
-                    var chunk = item as RiffChunk;                            // chunkのみ
-                    if (chunk != null) chunk.SkipToEnd();                     // データの最後に移動。
+                    var chunk = item as RiffChunk;                             
+                    if (chunk != null) chunk.SkipToEnd();                      
                 }
 
-                BaseStream.Position = origin; // 次回の列挙に備えはじめの場所に戻す
+                BaseStream.Position = origin;  
             }
         }
 
         public System.IO.Stream BaseStream { get; private set; }
-
-        /// <summary>書き込み用に開く。</summary>
+         
         public RiffFile(System.IO.Stream output, string fourCC) : base(output, "RIFF", fourCC)
         {
             BaseStream = output;
         }
-
-        /// <summary>読み取り用に開く。</summary>
+         
         public RiffFile(System.IO.Stream input) : base(input)
         {
             BaseStream = input;
@@ -70,8 +66,7 @@ namespace Voip
         }
 
         public RiffList(System.IO.Stream input) : base(input)
-        {
-            // IDが読めるか？
+        { 
             if (input.Length - input.Position < 4)
             {
                 Broken = true;
@@ -142,10 +137,7 @@ namespace Voip
     }
 
     public class RiffBase : IDisposable
-    {
-        /// <summary>
-        /// RiffFile先頭からのオフセット
-        /// </summary>
+    { 
         public long Offset { get; private set; }
         public long SizeOffset { get; private set; }
         public long DataOffset { get; private set; }
@@ -155,7 +147,7 @@ namespace Voip
         public string FourCC { get; private set; }
         internal static int ToFourCC(string fourCC)
         {
-            if (fourCC.Length != 4) throw new ArgumentException("fourCCは4文字である必要があります。", "fourCC");
+            if (fourCC.Length != 4) throw new ArgumentException("fourCC need 4 lenth", "fourCC");
             return ((int)fourCC[3]) << 24 | ((int)fourCC[2]) << 16 | ((int)fourCC[1]) << 8 | ((int)fourCC[0]);
         }
         internal static string ToFourCC(int fourCC)
@@ -178,15 +170,13 @@ namespace Voip
 
             this.SizeOffset = output.Position;
 
-            uint dummy_size = 0; // sizeに0を書いておく。Close時に正しい値を書き直す。
+            uint dummy_size = 0;  
             writer.Write(dummy_size);
 
             this.DataOffset = output.Position;
-
-            // Close(Dispose)時に呼び出される処理。
+             
             OnClose = () =>
-            {
-                // sizeを正しい値に変更する
+            { 
                 var position = writer.BaseStream.Position;
                 ChunkSize = (uint)(position - DataOffset);
                 writer.BaseStream.Position = SizeOffset;
@@ -199,10 +189,8 @@ namespace Voip
         public RiffBase(System.IO.Stream input)
         {
             var reader = new System.IO.BinaryReader(input);
-
-            // FourCCとChunkSizeが読めるか？
-            if (input.Length - input.Position < 8) { Broken = true; return; }
-            // FourCCとChunkSizeを読む。
+             
+            if (input.Length - input.Position < 8) { Broken = true; return; } 
             this.Offset = input.Position;
             FourCC = ToFourCC(reader.ReadInt32());
             this.SizeOffset = input.Position;
@@ -225,11 +213,9 @@ namespace Voip
         protected virtual void Dispose(bool disposing)
         {
             if (disposing)
-            {
-                // 管理（managed）リソースの破棄処理をここに記述します。 
+            {  
                 Close();
-            }
-            // 非管理（unmanaged）リソースの破棄処理をここに記述します。
+            } 
         }
 
         ~RiffBase() { Dispose(false); }

@@ -80,6 +80,9 @@
     <Reference Include="FM.LiveSwitch, Version=1.2.5.3110, Culture=neutral, processorArchitecture=MSIL">
       <HintPath>..\packages\FM.LiveSwitch.1.2.5.3110\lib\net45\FM.LiveSwitch.dll</HintPath>
     </Reference>
+    <Reference Include="Google.Protobuf, Version=3.11.4.0, Culture=neutral, PublicKeyToken=a7d26565bac4d604, processorArchitecture=MSIL">
+      <HintPath>..\packages\Google.Protobuf.3.11.4\lib\net45\Google.Protobuf.dll</HintPath>
+    </Reference>
     <Reference Include="NAudio, Version=1.10.0.0, Culture=neutral, processorArchitecture=MSIL">
       <HintPath>..\packages\NAudio.1.10.0\lib\net35\NAudio.dll</HintPath>
     </Reference>
@@ -103,8 +106,10 @@
     <Reference Include="System.Buffers, Version=4.0.2.0, Culture=neutral, PublicKeyToken=cc7b13ffcd2ddd51, processorArchitecture=MSIL">
       <HintPath>..\packages\System.Buffers.4.4.0\lib\netstandard2.0\System.Buffers.dll</HintPath>
     </Reference>
+    <Reference Include="System.Configuration" />
     <Reference Include="System.Data" />
     <Reference Include="System.Drawing" />
+    <Reference Include="System.Management" />
     <Reference Include="System.Memory, Version=4.0.1.1, Culture=neutral, PublicKeyToken=cc7b13ffcd2ddd51, processorArchitecture=MSIL">
       <HintPath>..\packages\System.Memory.4.5.3\lib\netstandard2.0\System.Memory.dll</HintPath>
     </Reference>
@@ -135,6 +140,9 @@
       <SubType>Designer</SubType>
     </ApplicationDefinition>
     <Compile Include="AviWriter.cs" />
+    <Compile Include="Cellnet\CellnetClient.cs" />
+    <Compile Include="Cellnet\Message.cs" />
+    <Compile Include="Cellnet\Util.cs" />
     <Compile Include="G729\Codec\AcelpCo.cs" />
     <Compile Include="G729\Codec\Bits.cs" />
     <Compile Include="G729\Codec\CodLd8k.cs" />
@@ -170,20 +178,33 @@
       <DependentUpon>GroupPage.xaml</DependentUpon>
     </Compile>
     <Compile Include="H264Writer.cs" />
-    <Compile Include="Id.cs" />
     <Compile Include="MessagePage.xaml.cs">
       <DependentUpon>MessagePage.xaml</DependentUpon>
     </Compile>
     <Compile Include="OpenH264.cs" />
     <Compile Include="Packet.cs" />
+    <Compile Include="Protocol\Account.cs" />
+    <Compile Include="Protocol\Chat.cs" />
+    <Compile Include="Protocol\Contact.cs" />
+    <Compile Include="Protocol\Echo.cs" />
+    <Compile Include="Protocol\Group.cs" />
+    <Compile Include="Protocol\Header.cs" />
+    <Compile Include="Protocol\Room.cs" />
+    <Compile Include="Protocol\Valid.cs" />
     <Compile Include="RiffFile.cs" />
+    <Compile Include="SignIn.xaml.cs">
+      <DependentUpon>MainWindow.xaml</DependentUpon>
+    </Compile>
     <Compile Include="VoipClient.cs" />
     <Compile Include="Util.cs" />
+    <Compile Include="VoipWindow.xaml.cs">
+      <DependentUpon>VoipWindow.xaml</DependentUpon>
+    </Compile>
     <Page Include="GroupPage.xaml">
       <SubType>Designer</SubType>
       <Generator>MSBuild:Compile</Generator>
     </Page>
-    <Page Include="MainWindow.xaml">
+    <Page Include="ChatWindow.xaml">
       <Generator>MSBuild:Compile</Generator>
       <SubType>Designer</SubType>
     </Page>
@@ -191,11 +212,19 @@
       <DependentUpon>App.xaml</DependentUpon>
       <SubType>Code</SubType>
     </Compile>
-    <Compile Include="MainWindow.xaml.cs">
-      <DependentUpon>MainWindow.xaml</DependentUpon>
+    <Compile Include="ChatWindow.xaml.cs">
+      <DependentUpon>ChatWindow.xaml</DependentUpon>
       <SubType>Code</SubType>
     </Compile>
     <Page Include="MessagePage.xaml">
+      <SubType>Designer</SubType>
+      <Generator>MSBuild:Compile</Generator>
+    </Page>
+    <Page Include="MainWindow.xaml">
+      <SubType>Designer</SubType>
+      <Generator>MSBuild:Compile</Generator>
+    </Page>
+    <Page Include="VoipWindow.xaml">
       <SubType>Designer</SubType>
       <Generator>MSBuild:Compile</Generator>
     </Page>
@@ -218,6 +247,7 @@
       <Generator>ResXFileCodeGenerator</Generator>
       <LastGenOutput>Resources.Designer.cs</LastGenOutput>
     </EmbeddedResource>
+    <Compile Include="Message.cs" />
     <None Include="packages.config" />
     <None Include="Properties\Settings.settings">
       <Generator>SettingsSingleFileGenerator</Generator>
@@ -226,6 +256,9 @@
   </ItemGroup>
   <ItemGroup>
     <None Include="App.config" />
+  </ItemGroup>
+  <ItemGroup>
+    <Resource Include="qm %282%29.jpg" />
   </ItemGroup>
   <Import Project="$(MSBuildToolsPath)\Microsoft.CSharp.targets" />
   <Target Name="EnsureNuGetPackageBuildImports" BeforeTargets="PrepareForBuild">

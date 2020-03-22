@@ -1,0 +1,72 @@
+﻿<Window x:Class="Voip.VoipWindow"
+        xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
+        xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
+        xmlns:local="clr-namespace:Voip"
+        mc:Ignorable="d"
+        Title="VoipWindow" Height="550" Width="320">
+    <Grid Background="#FF666C70" >
+        <Grid.RowDefinitions>
+            <RowDefinition />
+            <RowDefinition Height="2*" />
+            <RowDefinition />
+        </Grid.RowDefinitions>
+        <Grid>
+
+        </Grid>
+
+        <Image x:Name="videoImg" Visibility="Collapsed"  Grid.Row="1">
+
+        </Image>
+        <Grid x:Name="infoGrid" Visibility="Visible" Grid.Row="1" Grid.RowSpan="1">
+            <StackPanel>
+                <Ellipse  
+                    Grid.Row="1"
+                    HorizontalAlignment="Center"
+                    Width="120"
+                    Height="120" 
+                    Margin="10"
+                    VerticalAlignment="Top"               
+                    StrokeThickness="2"
+                    >
+                    <Ellipse.Fill>
+                        <ImageBrush x:Name="avatarImg" />
+                    </Ellipse.Fill>
+                </Ellipse>
+                <TextBlock Margin="10" HorizontalAlignment="Center" x:Name="nicknameText"   FontSize="14" Foreground="White" />
+                <TextBlock HorizontalAlignment="Center" Text="正在呼叫..." FontSize="8" Foreground="White"/>
+            </StackPanel>
+        </Grid>
+        <Grid Grid.Row="2">
+            <Grid.RowDefinitions>
+                <RowDefinition />
+                <RowDefinition Height="2*"/>
+                <RowDefinition />
+            </Grid.RowDefinitions>
+            <Grid Grid.Row="1">
+                <Grid.ColumnDefinitions>
+                    <ColumnDefinition />
+                    <ColumnDefinition />
+                    <ColumnDefinition />
+                </Grid.ColumnDefinitions>
+                <!--<Button x:Name="muteBtn" Background="{x:Null}" BorderBrush="{x:Null}"  >静音</Button>-->
+                <Button x:Name="hungBtn" Click="hungBtn_Click" Grid.Column="1" Background="{x:Null}" BorderBrush="{x:Null}" Foreground="White">
+                    <Button.Content>
+                        <Ellipse x:Name="hungEllipse"  
+                    Width="50"
+                    Height="50" 
+                    Margin="0"               
+                    StrokeThickness="2" 
+                    Fill="#FFFF4949"
+                    >
+
+                        </Ellipse>
+                    </Button.Content>
+                </Button>
+                <!--<Button x:Name="audioBtn" Grid.Column="2" Background="{x:Null}" BorderBrush="{x:Null}">扬声器</Button>-->
+            </Grid>
+
+        </Grid>
+    </Grid>
+</Window>
