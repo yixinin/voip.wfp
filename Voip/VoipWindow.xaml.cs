@@ -50,6 +50,7 @@ namespace Voip
             var videoQueue = new Queue<Av.VideoH264Packet>(FPS * 10);
             VoipClient = new Av.VoipClient(videoQueue, host, port, token, rid);
             VoipClient.AudioBufferRecieved += VoipClient_AudioBufferRecieved;
+            VoipClient.ConnectTcp();
             //VoipClient.VideoBufferRecieved += VoipClient_VideoBufferRecieved;
             AudioDecodder = new G729Decoder();
             PlayAudio();
