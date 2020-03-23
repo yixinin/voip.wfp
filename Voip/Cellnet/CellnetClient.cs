@@ -196,10 +196,14 @@ namespace Voip.Cellnet
         }
 
 
-        private async void ReceiveMessage()
+        private void ReceiveMessage()
         {
             while (true)
             {
+                if (!IsConnected)
+                {
+                    continue;
+                }
                 try
                 {
                     var header = new byte[HEADER_SIZE];

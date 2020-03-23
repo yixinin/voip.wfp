@@ -16,7 +16,7 @@
 
         </Grid>
 
-        <Image x:Name="videoImg" Visibility="Collapsed"  Grid.Row="1">
+        <Image x:Name="videoImg" Visibility="Collapsed" HorizontalAlignment="Stretch" Grid.Row="1" Stretch="UniformToFill">
 
         </Image>
         <Grid x:Name="infoGrid" Visibility="Visible" Grid.Row="1" Grid.RowSpan="1">

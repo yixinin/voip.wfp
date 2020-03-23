@@ -96,7 +96,7 @@ namespace Voip.Av
         public bool hasPPS;
 
         const int TCP_BUFSIZE = 4096;
-        const int HEADER_SIZE = 6+8;
+        const int HEADER_SIZE = 6 + 8;
 
         public Queue<VideoPacket> videoQueue;
         public Queue<AudioPacket> audioQueue;
@@ -462,7 +462,7 @@ namespace Voip.Av
 
 
 
-                if (body.Length > 0)
+                if (body != null && body.Length > 0)
                 {
                     var buf = Utils.Bytes.GetVideoBuffer(body);
                     var n = _socketConn.Send(buf);
