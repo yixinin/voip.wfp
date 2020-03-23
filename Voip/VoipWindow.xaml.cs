@@ -57,6 +57,8 @@ namespace Voip
             {
                 DecodeH264(videoQueue);
             });
+            VoipClient.CaptureAudio();
+            VoipClient.CaptureVideo();
         }
 
         private void hungBtn_Click(object sender, RoutedEventArgs e)
@@ -69,6 +71,8 @@ namespace Voip
             //断开tcp连接
             if (VoipClient != null && VoipClient.IsConnect)
             {
+                VoipClient.StopCaptureAudio();
+                VoipClient.StopCaptureVideo();
                 VoipClient.Disconnect();
             }
 
