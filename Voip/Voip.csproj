@@ -137,6 +137,7 @@
       <Generator>MSBuild:Compile</Generator>
       <SubType>Designer</SubType>
     </ApplicationDefinition>
+    <Compile Include="Config.cs" />
     <Compile Include="H264\AviWriter.cs" />
     <Compile Include="Cellnet\CellnetClient.cs" />
     <Compile Include="Cellnet\Message.cs" />

@@ -20,17 +20,11 @@ namespace Voip
     public partial class MainWindow : Window
     {
 
-        //public Cellnet.CellnetClient cellnetClient;
-        public string DefaultAvatar = "http://localhost:8080/static/avatar/default.jpg";
         public UserInfo UserInfo;
 
-        private string TCP_HOST = "127.0.0.1";
-        private int TCP_PORT = 8180;
         private bool isSignUp = false;
 
-        public string HttpURL = "http://localhost:8080/livechat/msg";
 
-        //List<Models.MessageUserItem> users = new List<Models.MessageUserItem>();
 
         public string Token { get; private set; }
 
@@ -41,7 +35,7 @@ namespace Voip
         public MainWindow()
         {
             InitializeComponent();
-            httpClient = new Utils.HttpClient(HttpURL);
+            httpClient = new Utils.HttpClient(Config.HttpMsgAddr);
             Cellnet.Message.InitMessageIds();
 
             //读取设置
@@ -97,7 +91,7 @@ namespace Voip
                         {
                             UserInfo.Uid = ack.UserInfo.Uid;
                             UserInfo.Nickname = ack.UserInfo.Nickname;
-                            UserInfo.Avatar = ack.UserInfo.Avatar;
+                            UserInfo.Avatar = Config.HttpAddr + ack.UserInfo.Avatar;
                         }
                         var users = await GetMessageUsers(ack.Token);
                         var contacts = await GetContacts(ack.Token);
@@ -123,7 +117,7 @@ namespace Voip
                         {
                             UserInfo.Uid = ack.UserInfo.Uid;
                             UserInfo.Nickname = ack.UserInfo.Nickname;
-                            UserInfo.Avatar = ack.UserInfo.Avatar;
+                            UserInfo.Avatar = Config.HttpAddr + ack.UserInfo.Avatar;
                         }
 
                         var users = await GetMessageUsers(ack.Token);
@@ -145,7 +139,7 @@ namespace Voip
                 {
                     contacts.Add(new Models.ContactItem
                     {
-                        Avatar = item.Avatar,
+                        Avatar = Config.HttpAddr + item.Avatar,
                         ContactId = item.ContactId,
                         Nickname = item.Nickname,
                         UserId = item.UserId,
@@ -173,7 +167,7 @@ namespace Voip
                     {
                         users.Add(new Models.MessageUserItem
                         {
-                            Avatar = item.Avatar,
+                            Avatar = Config.HttpAddr + item.Avatar,
                             Message = item.Messages?.FirstOrDefault()?.Text,
                             Nickname = item.Nickname,
                             UserId = item.UserId,
@@ -227,17 +221,21 @@ namespace Voip
             var bmp = new BitmapImage();
             bmp.BeginInit();
             var avatar = UserInfo.Avatar;
-            if (avatar == null || avatar == "")
-            {
-                avatar = DefaultAvatar;
-            }
+
             bmp.UriSource = new Uri(avatar);
             bmp.EndInit();
             coreWindow.avatarImg.ImageSource = bmp;
-            coreWindow.CellnetClient = new Cellnet.CellnetClient(TCP_HOST, TCP_PORT);
+            coreWindow.CellnetClient = new Cellnet.CellnetClient(Config.HOST, Config.TCP_PORT);
             coreWindow.CellnetClient.OnMessage += coreWindow.CellnetClient_OnMessage;
             coreWindow.CellnetClient.Connect();
-            coreWindow.httpClient = new Utils.HttpClient(HttpURL);
+            if (coreWindow.CellnetClient.IsConnected)
+            {
+                coreWindow.CellnetClient.Send(new Protocol.EchoReq
+                {
+                    Header = new Protocol.ReqHeader { Token = Token }
+                });
+            }
+            coreWindow.httpClient = new Utils.HttpClient(Config.HttpMsgAddr);
             coreWindow.UserInfo = UserInfo;
 
             coreWindow.Show();

@@ -74,7 +74,6 @@ namespace Voip.Cellnet
                 var endPoint = new IPEndPoint(IPAddress.Parse(this.Host), this.Port);
                 this._tcpSocker.ConnectAsync(endPoint).ContinueWith(_Activator =>
                 {
-                    //_tcpSocker.Send(new byte[0]);
                     Task.Run(() =>
                     {
                         ReceiveMessage();
@@ -140,7 +139,7 @@ namespace Voip.Cellnet
             this._tcpSocker.Dispose();
         }
 
-        public async Task Send<T>(T message) where T : pb::IMessage<T>
+        public void Send<T>(T message) where T : pb::IMessage<T>
         {
             try
             {
@@ -153,7 +152,7 @@ namespace Voip.Cellnet
 
                     var hashid = Utils.Cellnet.StringHash(message.GetType().FullName.ToLower());
                     var ids = Utils.Cellnet.IntToBitConverter(hashid);
-                    var lens = Utils.Cellnet.IntToBitConverter((UInt16)(data.Length + HEADER_SIZE-2));
+                    var lens = Utils.Cellnet.IntToBitConverter((UInt16)(data.Length + HEADER_SIZE - 2));
                     for (var i = 0; i < 2; i++)
                     {
                         buffer[i] = lens[i];

@@ -44,12 +44,6 @@ namespace Voip
             msgListView.DataContext = MessageList;
             Current = this;
         }
-
-
-
-
-
-
         async private void callVideoBtn_Click(object sender, RoutedEventArgs e)
         {
 
@@ -111,18 +105,42 @@ namespace Voip
             var t = Cellnet.Message.messages[args.MessaeId];
             if (t.FullName == typeof(Protocol.MessageNotify).FullName)
             {
+
+
                 //消息推送
                 var msg = Protocol.MessageNotify.Parser.ParseFrom(args.Buffer);
-                var isMe = msg.FromUserId == Me.Uid;
-                MessageList.Add(new Models.UserMessage
+                if (msg.FromUserId == ToUser.Uid || msg.Body.ToUserId == ToUser.Uid)
                 {
-                    AvatarCol = isMe ? 1 : 0,
-                    MessageCol = isMe ? 0 : 1,
-                    CreateTime = DateTime.Now.ToString(),
-                    Horizon = isMe ? HorizontalAlignment.Right : HorizontalAlignment.Left,
-                    Text = msg.Body.Text,
-                    Avatar = isMe ? msg.Avatar : Me?.Avatar,
-                });
+                    Dispatcher.BeginInvoke(System.Windows.Threading.DispatcherPriority.Normal, new Action(() =>
+                    {
+                        var isMe = msg.FromUserId == Me.Uid;
+                        MessageList.Add(new Models.UserMessage
+                        {
+                            AvatarCol = isMe ? 1 : 0,
+                            MessageCol = isMe ? 0 : 1,
+                            CreateTime = DateTime.Now.ToString(),
+                            Horizon = isMe ? HorizontalAlignment.Right : HorizontalAlignment.Left,
+                            Text = msg.Body.Text,
+                            Avatar = isMe ? Config.HttpAddr + msg.Avatar : Me?.Avatar,
+                        });
+                        msgListView.SelectedIndex = msgListView.Items.Count - 1;
+                        msgListView.ScrollIntoView(msgListView.SelectedItem);
+                    }));
+                }
+
+            }
+            else if (t.FullName == typeof(Protocol.RealTimeNotify).FullName)
+            {
+                var msg = Protocol.RealTimeNotify.Parser.ParseFrom(args.Buffer);
+                if (msg.IsConnect && msg.RealTimeInfo.TcpAddr != "")
+                {
+                    Dispatcher.BeginInvoke(System.Windows.Threading.DispatcherPriority.Normal, new Action(() =>
+                    {
+                        GotoVoipWindow(msg.RealTimeInfo.RoomId, msg.RealTimeInfo.Token, msg.RealTimeInfo.TcpAddr);
+                    }));
+
+                }
+
             }
         }
 

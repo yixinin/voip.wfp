@@ -47,6 +47,7 @@ namespace Voip.Cellnet
             ts.Add(typeof(Protocol.SignOutAck));
             ts.Add(typeof(Protocol.SignOffAck));
 
+            ts.Add(typeof(Protocol.EchoAck));
 
             CacheMessage(ts);
 

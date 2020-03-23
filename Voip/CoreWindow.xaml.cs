@@ -171,7 +171,6 @@ namespace Voip
                     p.MessageList.Add(item);
                 }
             }
-
             p.nicknameTb.Text = nickname;
             p.Me = UserInfo;
             p.ToUser = new UserInfo
@@ -184,7 +183,8 @@ namespace Voip
             p.httpClient = new Utils.HttpClient(httpClient.URL);
             p.CellnetClient = this.CellnetClient;
             p.CellnetClient.OnMessage += p.CellnetClient_OnMessage;
-            msgFrame.Navigate(p);
+
+            msgFrame.Navigate(p); 
         }
 
         private void addContactBtn_Click(object sender, RoutedEventArgs e)
@@ -250,6 +250,13 @@ namespace Voip
                 ContactType = 1,
             };
             var ack = await httpClient.Send<Protocol.AddContactReq, Protocol.AddContactAck>(req);
+        }
+
+        private void signOutBtn_Click(object sender, RoutedEventArgs e)
+        {
+            var m = new MainWindow();
+            m.Show();
+            this.Close();
         }
     }
 }
