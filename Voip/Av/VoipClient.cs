@@ -14,7 +14,7 @@ using System.Threading;
 using System.Threading.Tasks;
 using Voip.G729;
 
-namespace Voip
+namespace Voip.Av
 {
 
     public class MediaBufferArgs : EventArgs
@@ -96,7 +96,7 @@ namespace Voip
         public bool hasPPS;
 
         const int TCP_BUFSIZE = 4096;
-        const int HEADER_SIZE = 6;
+        const int HEADER_SIZE = 6+8;
 
         public Queue<VideoPacket> videoQueue;
         public Queue<AudioPacket> audioQueue;
@@ -238,7 +238,7 @@ namespace Voip
 
         public void JoinLive()
         {
-            var buf = Util.GetJoinBuffer(Token, RoomId);
+            var buf = Utils.Bytes.GetJoinBuffer(Token, RoomId);
             SendBuffer(buf);
 
         }
@@ -432,7 +432,7 @@ namespace Voip
                         continue;
                     }
 
-                    var buf = Util.GetAudioBuffer(p.Data);
+                    var buf = Utils.Bytes.GetAudioBuffer(p.Data);
                     var n = _socketConn.Send(buf);
                     if (n != buf.Length)
                     {
@@ -464,7 +464,7 @@ namespace Voip
 
                 if (body.Length > 0)
                 {
-                    var buf = Util.GetVideoBuffer(body);
+                    var buf = Utils.Bytes.GetVideoBuffer(body);
                     var n = _socketConn.Send(buf);
 
                     if (n != buf.Length)
@@ -530,19 +530,21 @@ namespace Voip
                         n += n1;
                     }
 
-                    //Debug.WriteLine(Util.GetBufferText(header));
+                    //Debug.WriteLine(Utils.Cache.GetBufferText(header));
                     if (header[0] != 2 || header[1] > 2)
                     {
                         Debug.WriteLine("header error");
                         continue;
                     }
 
-                    var bodySize = Util.GetBufSize(header);
+                    var bodySize = Utils.Bytes.GetBufSize(header);
                     if (bodySize == 0)
                     {
                         Debug.WriteLine("body size is 0", header);
                         continue;
                     }
+
+                    var timeStamp = Utils.Bytes.GetTimeStamp(header);
 
                     var body = new byte[bodySize];
                     var read = 0;

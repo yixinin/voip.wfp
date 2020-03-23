@@ -4,11 +4,10 @@ using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
 
-namespace Voip.Cellnet
+namespace Voip.Utils
 {
-    public class Utils
+    public class Cellnet
     {
-
         public static byte[] IntToBitConverter(ushort num)
         {
             return BitConverter.GetBytes(num);

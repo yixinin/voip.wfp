@@ -119,9 +119,9 @@ namespace Voip.Cellnet
                     var buffer = new byte[data.Length + 4];
                     //var bs = new byte[data.Length + 2];
 
-                    var hashid = Utils.StringHash(message.GetType().FullName.ToLower());
-                    var ids = Utils.IntToBitConverter(hashid);
-                    var lens = Utils.IntToBitConverter((UInt16)(data.Length + HEADER_SIZE-2));
+                    var hashid = Utils.Cellnet.StringHash(message.GetType().FullName.ToLower());
+                    var ids = Utils.Cellnet.IntToBitConverter(hashid);
+                    var lens = Utils.Cellnet.IntToBitConverter((UInt16)(data.Length + HEADER_SIZE-2));
                     for (var i = 0; i < 2; i++)
                     {
                         buffer[i] = lens[i];
@@ -193,18 +193,18 @@ namespace Voip.Cellnet
                     }
                     var msgId = BitConverter.ToUInt16(ids, 0);
 
-                    var len = Utils.BitToShort(lens);
+                    var len = Utils.Cellnet.BitToShort(lens);
                     var message = new byte[len - 2];
                     n = _tcpSocker.Receive(message);
                     if (n != message.Length)
                     {
-                        Debug.WriteLine("read msg body fail" + Util.GetBufferText(header));
+                        Debug.WriteLine("read msg body fail" + Utils.Bytes.GetBufferText(header));
                         continue;
                     }
                     var args = new SocketMessageEventArgs();
 
                     var buf = new byte[HEADER_SIZE + message.Length];
-                    var buflens = Util.Uint32ToBytes(message.Length);
+                    var buflens = Utils.Bytes.Uint32ToBytes(message.Length);
                     for (var i = 0; i < buf.Length; i++)
                     {
                         if (i < HEADER_SIZE)

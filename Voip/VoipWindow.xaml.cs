@@ -16,6 +16,7 @@ using System.Windows.Input;
 using System.Windows.Media;
 using System.Windows.Media.Imaging;
 using System.Windows.Shapes;
+using Voip.Av;
 using Voip.G729;
 
 namespace Voip
@@ -27,14 +28,11 @@ namespace Voip
     {
         public string avatarUrl;
         public string nickname;
-        public string Host { get; set; }
-        public short Port { get; set; }
-        public int RoomId { get; set; }
 
         const int FPS = 24;
 
 
-        public VoipClient VoipClient;
+        public Av.VoipClient VoipClient;
         public WaveOut audioPlayer;
         public BufferedWaveProvider audioProvider;
         public G729Decoder AudioDecodder;
@@ -42,9 +40,12 @@ namespace Voip
         public VoipWindow()
         {
             InitializeComponent();
+        }
 
-            var videoQueue = new Queue<VideoH264Packet>(FPS * 10);
-            VoipClient = new VoipClient(videoQueue, Host, Port, "", RoomId);
+        public void InitVoip(int rid, string token, string host, short port)
+        {
+            var videoQueue = new Queue<Av.VideoH264Packet>(FPS * 10);
+            VoipClient = new Av.VoipClient(videoQueue, host, port, token, rid);
             VoipClient.AudioBufferRecieved += VoipClient_AudioBufferRecieved;
             //VoipClient.VideoBufferRecieved += VoipClient_VideoBufferRecieved;
             AudioDecodder = new G729Decoder();
@@ -53,19 +54,6 @@ namespace Voip
             {
                 DecodeH264(videoQueue);
             });
-
-
-            //var ps = new string[44];
-            //var path = @"C:\Users\yixin\Pictures\Uplay\";
-            //for (var i = 1; i <= 44; i++)
-            //{
-            //    var fileName = $"frame.{i:D8}.jpg";
-            //    ps[i - 1] = path + fileName;
-            //}
-
-            //H264Encode(ps, 30);
-
-            //H264Decode(@"C:\Users\yixin\Desktop\test.avi", 30);
         }
 
         private void hungBtn_Click(object sender, RoutedEventArgs e)
@@ -76,11 +64,11 @@ namespace Voip
             //TODO 发送结束请求
 
             //断开tcp连接
-            if (VoipClient != null)
+            if (VoipClient != null && VoipClient.IsConnect)
             {
                 VoipClient.Disconnect();
             }
-           
+
             //关闭窗口
             this.Close();
         }
@@ -147,7 +135,7 @@ namespace Voip
                     {
                         continue;
                     }
-                    var frames = Util.SplitH264Buffer(p.Buffer);
+                    var frames = Utils.Bytes.SplitH264Buffer(p.Buffer);
                     foreach (var frame in frames)
                     {
                         if (frame[4] == 103 || hasKey)
@@ -160,9 +148,9 @@ namespace Voip
                             if (bmp != null)
                             {
                                 ShowBitmap(bmp, 0);
-                                index++; 
+                                index++;
                             }
-                                
+
                         }
                     }
 
@@ -170,7 +158,7 @@ namespace Voip
             }
 
         }
-         
+
         private void ShowBitmap(Bitmap bitmap, int i)
         {
             using (MemoryStream stream = new MemoryStream())

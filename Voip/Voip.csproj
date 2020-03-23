@@ -100,7 +100,7 @@
     </Reference>
     <Reference Include="OpenH264Lib, Version=1.0.7379.5018, Culture=neutral, processorArchitecture=AMD64">
       <SpecificVersion>False</SpecificVersion>
-      <HintPath>bin\x64\Debug\OpenH264Lib.dll</HintPath>
+      <HintPath>..\..\..\..\source\repos\Voip\Voip\bin\x64\Debug\OpenH264Lib.dll</HintPath>
     </Reference>
     <Reference Include="System" />
     <Reference Include="System.Buffers, Version=4.0.2.0, Culture=neutral, PublicKeyToken=cc7b13ffcd2ddd51, processorArchitecture=MSIL">
@@ -108,6 +108,9 @@
     </Reference>
     <Reference Include="System.Configuration" />
     <Reference Include="System.Data" />
+    <Reference Include="System.Data.SQLite, Version=1.0.112.0, Culture=neutral, PublicKeyToken=db937bc2d44ff139, processorArchitecture=MSIL">
+      <HintPath>..\packages\System.Data.SQLite.Core.1.0.112.0\lib\net46\System.Data.SQLite.dll</HintPath>
+    </Reference>
     <Reference Include="System.Drawing" />
     <Reference Include="System.Management" />
     <Reference Include="System.Memory, Version=4.0.1.1, Culture=neutral, PublicKeyToken=cc7b13ffcd2ddd51, processorArchitecture=MSIL">
@@ -139,10 +142,9 @@
       <Generator>MSBuild:Compile</Generator>
       <SubType>Designer</SubType>
     </ApplicationDefinition>
-    <Compile Include="AviWriter.cs" />
+    <Compile Include="H264\AviWriter.cs" />
     <Compile Include="Cellnet\CellnetClient.cs" />
     <Compile Include="Cellnet\Message.cs" />
-    <Compile Include="Cellnet\Util.cs" />
     <Compile Include="G729\Codec\AcelpCo.cs" />
     <Compile Include="G729\Codec\Bits.cs" />
     <Compile Include="G729\Codec\CodLd8k.cs" />
@@ -177,12 +179,18 @@
     <Compile Include="GroupPage.xaml.cs">
       <DependentUpon>GroupPage.xaml</DependentUpon>
     </Compile>
-    <Compile Include="H264Writer.cs" />
+    <Compile Include="H264\H264Writer.cs" />
+    <Compile Include="MainWindow.xaml.cs">
+      <DependentUpon>MainWindow.xaml</DependentUpon>
+    </Compile>
     <Compile Include="MessagePage.xaml.cs">
       <DependentUpon>MessagePage.xaml</DependentUpon>
     </Compile>
-    <Compile Include="OpenH264.cs" />
-    <Compile Include="Packet.cs" />
+    <Compile Include="H264\OpenH264.cs" />
+    <Compile Include="Av\Packet.cs" />
+    <Compile Include="Models\Contact.cs" />
+    <Compile Include="H264\RiffFile.cs" />
+    <Compile Include="Av\VoipClient.cs" />
     <Compile Include="Protocol\Account.cs" />
     <Compile Include="Protocol\Chat.cs" />
     <Compile Include="Protocol\Contact.cs" />
@@ -191,12 +199,12 @@
     <Compile Include="Protocol\Header.cs" />
     <Compile Include="Protocol\Room.cs" />
     <Compile Include="Protocol\Valid.cs" />
-    <Compile Include="RiffFile.cs" />
-    <Compile Include="SignIn.xaml.cs">
-      <DependentUpon>MainWindow.xaml</DependentUpon>
-    </Compile>
-    <Compile Include="VoipClient.cs" />
-    <Compile Include="Util.cs" />
+    <Compile Include="Utils\Bytes.cs" />
+    <Compile Include="Utils\Cache.cs" />
+    <Compile Include="Utils\Cellnet.cs" />
+    <Compile Include="Utils\Database.cs" />
+    <Compile Include="Utils\Http.cs" />
+    <Compile Include="Utils\Util.cs" />
     <Compile Include="VoipWindow.xaml.cs">
       <DependentUpon>VoipWindow.xaml</DependentUpon>
     </Compile>
@@ -204,7 +212,7 @@
       <SubType>Designer</SubType>
       <Generator>MSBuild:Compile</Generator>
     </Page>
-    <Page Include="ChatWindow.xaml">
+    <Page Include="CoreWindow.xaml">
       <Generator>MSBuild:Compile</Generator>
       <SubType>Designer</SubType>
     </Page>
@@ -212,8 +220,8 @@
       <DependentUpon>App.xaml</DependentUpon>
       <SubType>Code</SubType>
     </Compile>
-    <Compile Include="ChatWindow.xaml.cs">
-      <DependentUpon>ChatWindow.xaml</DependentUpon>
+    <Compile Include="CoreWindow.xaml.cs">
+      <DependentUpon>CoreWindow.xaml</DependentUpon>
       <SubType>Code</SubType>
     </Compile>
     <Page Include="MessagePage.xaml">
@@ -247,7 +255,7 @@
       <Generator>ResXFileCodeGenerator</Generator>
       <LastGenOutput>Resources.Designer.cs</LastGenOutput>
     </EmbeddedResource>
-    <Compile Include="Message.cs" />
+    <Compile Include="Models\Message.cs" />
     <None Include="packages.config" />
     <None Include="Properties\Settings.settings">
       <Generator>SettingsSingleFileGenerator</Generator>
@@ -257,14 +265,13 @@
   <ItemGroup>
     <None Include="App.config" />
   </ItemGroup>
-  <ItemGroup>
-    <Resource Include="qm %282%29.jpg" />
-  </ItemGroup>
   <Import Project="$(MSBuildToolsPath)\Microsoft.CSharp.targets" />
   <Target Name="EnsureNuGetPackageBuildImports" BeforeTargets="PrepareForBuild">
     <PropertyGroup>
       <ErrorText>This project references NuGet package(s) that are missing on this computer. Use NuGet Package Restore to download them.  For more information, see http://go.microsoft.com/fwlink/?LinkID=322105. The missing file is {0}.</ErrorText>
     </PropertyGroup>
     <Error Condition="!Exists('..\packages\OpenCvSharp4.runtime.win.4.2.0.20200208\build\net\OpenCvSharp4.runtime.win.props')" Text="$([System.String]::Format('$(ErrorText)', '..\packages\OpenCvSharp4.runtime.win.4.2.0.20200208\build\net\OpenCvSharp4.runtime.win.props'))" />
+    <Error Condition="!Exists('..\packages\System.Data.SQLite.Core.1.0.112.0\build\net46\System.Data.SQLite.Core.targets')" Text="$([System.String]::Format('$(ErrorText)', '..\packages\System.Data.SQLite.Core.1.0.112.0\build\net46\System.Data.SQLite.Core.targets'))" />
   </Target>
+  <Import Project="..\packages\System.Data.SQLite.Core.1.0.112.0\build\net46\System.Data.SQLite.Core.targets" Condition="Exists('..\packages\System.Data.SQLite.Core.1.0.112.0\build\net46\System.Data.SQLite.Core.targets')" />
 </Project>

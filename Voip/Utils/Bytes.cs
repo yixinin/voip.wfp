@@ -1,108 +1,24 @@
-﻿
-using System;
+﻿using System;
 using System.Collections.Generic;
-using System.Configuration;
-using System.Diagnostics;
 using System.Drawing;
 using System.Drawing.Imaging;
 using System.Linq;
-using System.Management;
 using System.Runtime.InteropServices;
 using System.Text;
 using System.Threading.Tasks;
 
-namespace Voip
+namespace Voip.Utils
 {
-    public class Util
+    public class Bytes
     {
-
-        public const string Password = "pwd";
-        public const string Username = "uname";
-        public const string Remember = "remem";
-        public const string AutoSignIn = "autos";
-        public const string Avatar = "avatar";
-        public const string DeviceCode = "device";
-
-
-        public static DateTime TsToTime(long ts)
-        {
-            System.DateTime dateTime = new System.DateTime(1970, 1, 1, 0, 0, 0, 0);
-            dateTime = dateTime.AddMilliseconds(ts).ToLocalTime();
-            return dateTime;
-        }
-
-        public static string GetDefaultUserName()
-        {
-            try
-            {
-                var key = "username";
-                string settingString = ConfigurationManager.AppSettings[key].ToString();
-                return settingString;
-            }
-            catch (Exception)
-            {
-                return "";
-            }
-        }
-        public static void SetDefaultUsername(string username)
-        {
-            var key = Username;
-            Configuration config = ConfigurationManager.OpenExeConfiguration(ConfigurationUserLevel.None);
-
-            if (ConfigurationManager.AppSettings[key] != null)
-            {
-                config.AppSettings.Settings.Remove(key);
-            }
-            config.AppSettings.Settings.Add(key, username);
-            config.Save(ConfigurationSaveMode.Modified);
-            ConfigurationManager.RefreshSection("appSettings");
-        }
-        public static string GetSettingString(string settingName, string username)
-        {
-            try
-            {
-                var key = string.Format("{0}_{1}", settingName, username);
-                string settingString = ConfigurationManager.AppSettings[key].ToString();
-                return settingString;
-            }
-            catch (Exception)
-            {
-                return "";
-            }
-        }
-
-        /// <summary>
-        /// 更新设置
-        /// </summary>
-        /// <param name="settingName"></param>
-        /// <param name="valueName"></param>
-        public static void UpdateSettingString(string settingName, string username, string valueName)
-        {
-            var key = string.Format("{0}_{1}", settingName, username);
-            Configuration config = ConfigurationManager.OpenExeConfiguration(ConfigurationUserLevel.None);
-
-            if (ConfigurationManager.AppSettings[key] != null)
-            {
-                config.AppSettings.Settings.Remove(key);
-            }
-            config.AppSettings.Settings.Add(key, valueName);
-            config.Save(ConfigurationSaveMode.Modified);
-            ConfigurationManager.RefreshSection("appSettings");
-        }
-
-        public static string GetDeviceCode()
-        {
-            System.Management.ManagementObjectSearcher searcher = new System.Management.ManagementObjectSearcher("SELECT * FROM Win32_PhysicalMedia");
-            foreach (ManagementObject mo in searcher.Get())
-            {
-                return mo["SerialNumber"].ToString().Trim();
-            }
-            return "";
-        }
 
         public static UInt32 BytesToUint32(byte[] bs)
         {
             return BitConverter.ToUInt32(bs, 0);
+        }
+        public static ulong BytesToUint64(byte[] bs)
+        {
+            return BitConverter.ToUInt64(bs, 0);
         }
         public static int BytesToInt32(byte[] bs)
         {
@@ -110,8 +26,12 @@ namespace Voip
         }
         public static byte[] Uint32ToBytes(int i)
         {
-            //var buf = new byte[4];
             return BitConverter.GetBytes((uint)(i));
+        }
+
+        public static byte[] Uint64ToBytes(long i)
+        {
+            return BitConverter.GetBytes((ulong)(i));
         }
 
         public static byte[] Uint16ToBytes(int i)
@@ -139,6 +59,15 @@ namespace Voip
             Array.Copy(header, 2, len, 0, 4);
 
             return (int)BytesToUint32(len);
+        }
+
+        public static long GetTimeStamp(byte[] header)
+        {
+            var len = new byte[8];
+            Array.Copy(header, 2 + 4, len, 0, 8);
+
+            return (int)BytesToUint64(len);
+
         }
         public static byte[] GetAudioHeader(int bodySize)
         {
@@ -181,19 +110,23 @@ namespace Voip
             buf[0] = 2;
             buf[1] = 1;
             var sizes = Uint32ToBytes(body.Length);
+            var ts = Uint64ToBytes(Util.GetTimeStamp());
             Array.Copy(sizes, 0, buf, 2, 4);
-            Array.Copy(body, 0, buf, 6, body.Length);
+            Array.Copy(ts, 0, buf, 2 + 4, 8);
+            Array.Copy(body, 0, buf, 2 + 4 + 8, body.Length);
 
             return buf;
         }
         public static byte[] GetVideoBuffer(byte[] body)
         {
-            var buf = new byte[body.Length + 6];
+            var buf = new byte[body.Length + 2 + 4 + 8];
             buf[0] = 2;
             buf[1] = 2;
             var sizes = Uint32ToBytes(body.Length);
+            var ts = Uint64ToBytes(Util.GetTimeStamp());
             Array.Copy(sizes, 0, buf, 2, 4);
-            Array.Copy(body, 0, buf, 6, body.Length);
+            Array.Copy(ts, 0, buf, 2 + 4, 8);
+            Array.Copy(body, 0, buf, 2 + 4 + 8, body.Length);
 
             return buf;
         }
@@ -295,7 +228,5 @@ namespace Voip
             for (i = 0; i < L; i++)
                 y[y_offset + i] = x[x_offset + i];
         }
-
-
     }
 }

@@ -5,7 +5,7 @@ using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
 
-namespace Voip
+namespace Voip.H264
 {
     public class OpenH264Decoder
     {

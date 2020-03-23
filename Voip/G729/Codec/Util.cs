@@ -53,7 +53,7 @@ namespace Voip.G729.Codec
 */
 
         /*
- File : UTIL.C
+ File : Utils.Cache.C
  Used for the floating point version of both
  G.729 main body and G.729A
 */

@@ -38,7 +38,6 @@ namespace Voip.Cellnet
             ts.Add(typeof(Protocol.RealTimeNotify));
             ts.Add(typeof(Protocol.CancelRealTimeAck));
             ts.Add(typeof(Protocol.PollAck));
-            ts.Add(typeof(Protocol.PollMessageAck));
             ts.Add(typeof(Protocol.GetMessageUserAck));
             ts.Add(typeof(Protocol.GetMessageAck));
 
@@ -59,7 +58,7 @@ namespace Voip.Cellnet
             foreach (var t in ts)
             {
                 var name = t.FullName.ToLower();
-                var msgid = Utils.StringHash(name);
+                var msgid = Utils.Cellnet.StringHash(name);
                 messages[msgid] = t;
                 Debug.WriteLine(string.Format("name={0}, id={1}", name, msgid));
             }
