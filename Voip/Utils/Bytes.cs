@@ -49,6 +49,10 @@ namespace Voip.Utils
         {
             return BitConverter.GetBytes(i);
         }
+        public static byte[] Int32ToBytes(int i)
+        {
+            return BitConverter.GetBytes(i);
+        }
         public static byte[] IntToBytes(int i)
         {
             return BitConverter.GetBytes(i);
@@ -90,16 +94,16 @@ namespace Voip.Utils
             return header;
         }
 
-        public static byte[] GetJoinBuffer(string token, long roomId)
+        public static byte[] GetJoinBuffer(string token, int roomId)
         {
-            var buf = new byte[2 + 32 + 8];
+            var buf = new byte[2 + 32 + 4];
             buf[0] = 2;
             buf[1] = 0;
             var ts = Encoding.UTF8.GetBytes(token);
             var rs = Int64ToBytes(roomId);
 
             Array.Copy(ts, 0, buf, 2, 32);
-            Array.Copy(rs, 0, buf, 32 + 2, 8);
+            Array.Copy(rs, 0, buf, 32 + 2, 4);
 
             return buf;
         }

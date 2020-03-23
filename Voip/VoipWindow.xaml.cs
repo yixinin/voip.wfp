@@ -37,9 +37,12 @@ namespace Voip
         public BufferedWaveProvider audioProvider;
         public G729Decoder AudioDecodder;
 
+        public static VoipWindow Current { get; internal set; }
+
         public VoipWindow()
         {
             InitializeComponent();
+            Current = this;
         }
 
         public void InitVoip(int rid, string token, string host, short port)

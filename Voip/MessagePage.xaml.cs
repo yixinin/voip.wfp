@@ -78,6 +78,7 @@ namespace Voip
             var host = addrs[0];
             var port = short.Parse(addrs[1]);
             voipWindow.InitVoip(rid, token, host, port);
+            voipWindow.VoipClient.ConnectTcp();
             voipWindow.Show();
         }
 
@@ -128,20 +129,7 @@ namespace Voip
                     }));
                 }
 
-            }
-            else if (t.FullName == typeof(Protocol.RealTimeNotify).FullName)
-            {
-                var msg = Protocol.RealTimeNotify.Parser.ParseFrom(args.Buffer);
-                if (msg.IsConnect && msg.RealTimeInfo.TcpAddr != "")
-                {
-                    Dispatcher.BeginInvoke(System.Windows.Threading.DispatcherPriority.Normal, new Action(() =>
-                    {
-                        GotoVoipWindow(msg.RealTimeInfo.RoomId, msg.RealTimeInfo.Token, msg.RealTimeInfo.TcpAddr);
-                    }));
-
-                }
-
-            }
+            } 
         }
 
     }

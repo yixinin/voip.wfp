@@ -80,7 +80,7 @@ namespace Voip.Av
         public bool AudioOn { get { return _audioOn; } }
 
         public string Token { get; set; }
-        public long RoomId { get; set; }
+        public int RoomId { get; set; }
         public bool IsConnect
         {
             get
@@ -107,7 +107,7 @@ namespace Voip.Av
 
         private G729Encoder AudioEncoder { get; set; }
 
-        public VoipClient(Queue<VideoH264Packet> q, string host, short port, string token, long roomId, int fps = 24)
+        public VoipClient(Queue<VideoH264Packet> q, string host, short port, string token, int roomId, int fps = 24)
         {
             Host = host;
             Port = port;

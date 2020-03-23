@@ -141,7 +141,10 @@ namespace Voip
                     {
                         Dispatcher.BeginInvoke(System.Windows.Threading.DispatcherPriority.Normal, new Action(() =>
                         {
-
+                            if(VoipWindow.Current != null)
+                            {
+                                return;//只能打开一个通话窗口
+                            }
                             OpenVoipWindow(msg.RealTimeInfo.UserId, msg.RealTimeInfo.RoomId,
                                 msg.RealTimeInfo.Token,
                                 msg.RealTimeInfo.TcpAddr);
@@ -184,7 +187,7 @@ namespace Voip
             p.CellnetClient = this.CellnetClient;
             p.CellnetClient.OnMessage += p.CellnetClient_OnMessage;
 
-            msgFrame.Navigate(p); 
+            msgFrame.Navigate(p);
         }
 
         private void addContactBtn_Click(object sender, RoutedEventArgs e)
