@@ -110,7 +110,7 @@ namespace Voip.Utils
 
         public static byte[] GetAudioBuffer(byte[] body)
         {
-            var buf = new byte[body.Length + 6];
+            var buf = new byte[body.Length + 2+4+8];
             buf[0] = 2;
             buf[1] = 1;
             var sizes = Uint32ToBytes(body.Length);

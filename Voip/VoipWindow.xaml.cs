@@ -39,6 +39,8 @@ namespace Voip
 
         public static VoipWindow Current { get; internal set; }
 
+        public bool hasVideo = false;
+        public bool hasAudio = false;
         public VoipWindow()
         {
             InitializeComponent();
@@ -114,6 +116,14 @@ namespace Voip
         {
             var buf = AudioDecodder.Process(e.Buffer);
             audioProvider.AddSamples(buf, 0, buf.Length);
+            if (!hasAudio)
+            {
+                Dispatcher.BeginInvoke(System.Windows.Threading.DispatcherPriority.Normal, new Action(() =>
+                {
+                    msg.Text = "已接通";
+                    hasAudio = true;
+                }));
+            }
 
             //Debug.WriteLine("recieved audio buffer", e.Buffer.Length);
         }
@@ -169,6 +179,15 @@ namespace Voip
 
         private void ShowBitmap(Bitmap bitmap, int i)
         {
+            if (!hasVideo)
+            {
+                Dispatcher.BeginInvoke(System.Windows.Threading.DispatcherPriority.Normal, new Action(() =>
+                {
+                    videoImg.Visibility = Visibility.Visible;
+                    infoGrid.Visibility = Visibility.Collapsed;
+                }));
+                hasVideo = true;
+            }
             using (MemoryStream stream = new MemoryStream())
             {
                 bitmap.Save(stream, ImageFormat.Png); // 坑点：格式选Bmp时，不带透明度

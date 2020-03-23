@@ -35,7 +35,7 @@
                     </Ellipse.Fill>
                 </Ellipse>
                 <TextBlock Margin="10" HorizontalAlignment="Center" x:Name="nicknameText"   FontSize="14" Foreground="White" />
-                <TextBlock HorizontalAlignment="Center" Text="正在呼叫..." FontSize="8" Foreground="White"/>
+                <TextBlock x:Name="msg" HorizontalAlignment="Center" Text="正在呼叫..." FontSize="8" Foreground="White"/>
             </StackPanel>
         </Grid>
         <Grid Grid.Row="2">
