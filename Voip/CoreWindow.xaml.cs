@@ -73,50 +73,21 @@ namespace Voip
         async private void msgListView_SelectionChanged(object sender, SelectionChangedEventArgs e)
         {
 
-            var userMsgItem = msgListView.SelectedItem as Models.MessageUserItem;
-            var msgs = await GetUserMessage(userMsgItem);
-            if (msgs.Count > 0)
-            {
-                if (UserMessages.ContainsKey(userMsgItem.UserId))
-                {
-                    UserMessages[userMsgItem.UserId].AddRange(msgs);
-                }
-                else
-                {
-                    UserMessages.Add(userMsgItem.UserId, msgs);
-                }
-            }
+            var user = msgListView.SelectedItem as Models.MessageUserItem;
+            await GetUserMessage(user.UserId, user.Avatar);
 
 
 
-            var p = new MessagePage();
-            if (UserMessages.ContainsKey(userMsgItem.UserId))
-            {
-                foreach (var item in UserMessages[userMsgItem.UserId])
-                {
-                    p.MessageList.Add(item);
-                }
-            }
-
-            p.nicknameTb.Text = userMsgItem.Nickname;
-            p.Me = UserInfo;
-            p.ToUser = new UserInfo
-            {
-                Avatar = userMsgItem.Avatar,
-                Nickname = userMsgItem.Nickname,
-                Uid = userMsgItem.UserId,
-            };
-            p.httpClient = new Utils.HttpClient(httpClient.URL);
-            msgFrame.Navigate(p);
+            OpenMessagePage(user.UserId, user.Nickname, user.Avatar);
         }
 
-        async private Task<List<Models.UserMessage>> GetUserMessage(Models.MessageUserItem u)
+        async private Task GetUserMessage(long uid, string avatar)
         {
             var list = new List<Models.UserMessage>();
             var req = new Protocol.GetMessageReq()
             {
                 Header = new Protocol.ReqHeader { Token = Token },
-                UserId = u.UserId,
+                UserId = uid,
             };
 
             var ack = await httpClient.Send<Protocol.GetMessageReq, Protocol.GetMessageAck>(req);
@@ -132,12 +103,24 @@ namespace Voip
                         CreateTime = Utils.Util.TsToTime(item.CreateTime).ToString(),
                         Horizon = isMe ? HorizontalAlignment.Right : HorizontalAlignment.Left,
                         Text = item.Text,
-                        Avatar = isMe ? UserInfo.Avatar : u.Avatar,
+                        Avatar = isMe ? UserInfo.Avatar : avatar,
                     });
                 }
 
             }
-            return list;
+
+            if (list.Count > 0)
+            {
+                if (UserMessages.ContainsKey(uid))
+                {
+                    UserMessages[uid].AddRange(list);
+                }
+                else
+                {
+                    UserMessages.Add(uid, list);
+                }
+            }
+            return;
         }
 
         public void CellnetClient_OnMessage(System.Net.Sockets.Socket sender, Cellnet.SocketMessageEventArgs args)
@@ -168,14 +151,40 @@ namespace Voip
             }
         }
 
-        private void contactListView_Selected(object sender, RoutedEventArgs e)
-        {
 
+
+        async private void contactListView_SelectionChanged(object sender, SelectionChangedEventArgs e)
+        {
+            var contact = contactListView.SelectedItem as Models.ContactItem;
+            await GetUserMessage(contact.UserId, contact.Avatar);
+
+            OpenMessagePage(contact.UserId, contact.Nickname, contact.Avatar);
         }
 
-        private void contactListView_SelectionChanged(object sender, SelectionChangedEventArgs e)
+        private void OpenMessagePage(long uid, string nickname, string avatar)
         {
+            var p = new MessagePage();
+            if (UserMessages.ContainsKey(uid))
+            {
+                foreach (var item in UserMessages[uid])
+                {
+                    p.MessageList.Add(item);
+                }
+            }
 
+            p.nicknameTb.Text = nickname;
+            p.Me = UserInfo;
+            p.ToUser = new UserInfo
+            {
+                Avatar = avatar,
+                Nickname = nickname,
+                Uid = uid,
+            };
+            p.Token = Token;
+            p.httpClient = new Utils.HttpClient(httpClient.URL);
+            p.CellnetClient = this.CellnetClient;
+            p.CellnetClient.OnMessage += p.CellnetClient_OnMessage;
+            msgFrame.Navigate(p);
         }
 
         private void addContactBtn_Click(object sender, RoutedEventArgs e)
@@ -229,6 +238,18 @@ namespace Voip
             {
                 MessageBox.Show("发起通话失败");
             }
+        }
+
+        async private void addContactBtn_Click_1(object sender, RoutedEventArgs e)
+        {
+            long.TryParse(addUidTb.Text, out var uid);
+            var req = new Protocol.AddContactReq
+            {
+                Header = new Protocol.ReqHeader { Token = Token },
+                UserId = uid,
+                ContactType = 1,
+            };
+            var ack = await httpClient.Send<Protocol.AddContactReq, Protocol.AddContactAck>(req);
         }
     }
 }

@@ -57,6 +57,38 @@ namespace Voip.Cellnet
             this.Port = port;
         }
 
+        public void Connect()
+        {
+            if (this._tcpSocker == null)
+            {
+                this._tcpSocker = new Socket(SocketType.Stream, ProtocolType.Tcp);
+            }
+            if (this.Host == "" || this.Port == 0)
+            {
+                return;
+            }
+
+            try
+            {
+
+                var endPoint = new IPEndPoint(IPAddress.Parse(this.Host), this.Port);
+                this._tcpSocker.ConnectAsync(endPoint).ContinueWith(_Activator =>
+                {
+                    //_tcpSocker.Send(new byte[0]);
+                    Task.Run(() =>
+                    {
+                        ReceiveMessage();
+                    });
+                });
+
+                this._isConnected = true;
+            }
+            catch (Exception ex)
+            {
+                Debug.WriteLine("socket connect fail, ex:", ex);
+                this._isConnected = false;
+            }
+        }
 
         public async Task ConnectAsync()
         {

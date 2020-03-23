@@ -21,7 +21,7 @@ namespace Voip.Utils
             this.httpClient = new System.Net.Http.HttpClient();
         }
 
-        public async Task<Ack> Send<Req, Ack>(Req message) 
+        public async Task<Ack> Send<Req, Ack>(Req message)
             where Req : pb::IMessage<Req>, new()
             where Ack : pb::IMessage<Ack>, new()
         {
@@ -59,7 +59,7 @@ namespace Voip.Utils
                     var ackBuffer = await resp.Content.ReadAsByteArrayAsync();
 
                     var parser = new pb::MessageParser<Ack>(() => new Ack());
-                    var ack = parser.ParseFrom(ackBuffer);
+                    var ack = parser.ParseFrom(ackBuffer, 4, ackBuffer.Length - 4);
                     return ack;
                 }
             }

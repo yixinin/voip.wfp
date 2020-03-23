@@ -2,6 +2,7 @@
 using System;
 using System.Collections.Generic;
 using System.Collections.ObjectModel;
+using System.Diagnostics;
 using System.IO;
 using System.Linq;
 using System.Text;
@@ -24,14 +25,17 @@ namespace Voip
     /// </summary>
     public partial class MessagePage : Page
     {
+
+        public string Token { get; set; }
         public static MessagePage Current { get; set; }
 
-        public ObservableCollection<Models.UserMessage> MessageList;
+        public ObservableCollection<Models.UserMessage> MessageList { get; set; }
 
         public UserInfo Me;
         public UserInfo ToUser;
 
         public Utils.HttpClient httpClient;
+        public Cellnet.CellnetClient CellnetClient { get; set; }
 
         public MessagePage()
         {
@@ -51,12 +55,17 @@ namespace Voip
 
             var req = new Protocol.RealTimeReq
             {
+                Header = new Protocol.ReqHeader { Token = Token },
                 UserId = ToUser.Uid,
             };
             var ack = await httpClient.Send<Protocol.RealTimeReq, Protocol.RealTimeAck>(req);
             if (ack != null && ack.Header != null && ack.Header.Code == 200)
             {
                 GotoVoipWindow(ack.RoomId, ack.Token, ack.TcpAddr);
+            }
+            else
+            {
+
             }
         }
 
@@ -76,6 +85,45 @@ namespace Voip
             var port = short.Parse(addrs[1]);
             voipWindow.InitVoip(rid, token, host, port);
             voipWindow.Show();
+        }
+
+        async private void sendBtn_Click(object sender, RoutedEventArgs e)
+        {
+            var req = new Protocol.SendMessageReq
+            {
+                Header = new Protocol.ReqHeader { Token = Token },
+                Body = new Protocol.MessageBody
+                {
+                    MessageType = 1,
+                    Text = msgTb.Text,
+                    ToUserId = ToUser.Uid,
+                },
+            };
+            var ack = await httpClient.Send<Protocol.SendMessageReq, Protocol.SendMessageAck>(req);
+            if (ack.Header.Code != 200)
+            {
+                Debug.WriteLine(ack.Header.Msg);
+            }
+            msgTb.Text = "";
+        }
+        public void CellnetClient_OnMessage(System.Net.Sockets.Socket sender, Cellnet.SocketMessageEventArgs args)
+        {
+            var t = Cellnet.Message.messages[args.MessaeId];
+            if (t.FullName == typeof(Protocol.MessageNotify).FullName)
+            {
+                //消息推送
+                var msg = Protocol.MessageNotify.Parser.ParseFrom(args.Buffer);
+                var isMe = msg.FromUserId == Me.Uid;
+                MessageList.Add(new Models.UserMessage
+                {
+                    AvatarCol = isMe ? 1 : 0,
+                    MessageCol = isMe ? 0 : 1,
+                    CreateTime = DateTime.Now.ToString(),
+                    Horizon = isMe ? HorizontalAlignment.Right : HorizontalAlignment.Left,
+                    Text = msg.Body.Text,
+                    Avatar = isMe ? msg.Avatar : Me?.Avatar,
+                });
+            }
         }
 
     }

@@ -45,13 +45,14 @@ namespace Voip
             Cellnet.Message.InitMessageIds();
 
             //读取设置
-            UserInfo = new UserInfo();
+            //UserInfo = new UserInfo();
+            UserInfo = Utils.Cache.GetUserInfo(Utils.Cache.GetDefaultUserName());
             if (UserInfo.Username != null && UserInfo.Username != "")
             {
                 uname.Text = UserInfo.Username;
                 pwd.Password = UserInfo.Password;
-                autoSignCheck.IsChecked = UserInfo.AutoSign == "1";
-                remberCheck.IsChecked = UserInfo.Remember == "1";
+                autoSignCheck.IsChecked = UserInfo.AutoSign;
+                remberCheck.IsChecked = UserInfo.Remember;
             }
 
             Current = this;
@@ -77,12 +78,14 @@ namespace Voip
             UserInfo.Password = pwd.Password;
             if (isSignUp)
             {
+                var deviceCode = Utils.Util.GetDeviceCode();
+
                 var req = new Protocol.SignUpReq
                 {
                     Header = new Protocol.ReqHeader(),
                     Username = uname.Text,
                     Password = UserInfo.Password,
-                    DeviceCode = UserInfo.DeviceCode == "" ? Utils.Util.GetDeviceCode() : UserInfo.DeviceCode,
+                    DeviceCode = deviceCode,
                     DeviceType = 2,
                 };
                 var ack = await httpClient.Send<Protocol.SignUpReq, Protocol.SignUpAck>(req);
@@ -96,7 +99,9 @@ namespace Voip
                             UserInfo.Nickname = ack.UserInfo.Nickname;
                             UserInfo.Avatar = ack.UserInfo.Avatar;
                         }
-                        await GetMessageUsers(ack.Token);
+                        var users = await GetMessageUsers(ack.Token);
+                        var contacts = await GetContacts(ack.Token);
+                        OpenCoreWindow(users, contacts);
                     }
                 }
             }
@@ -121,13 +126,36 @@ namespace Voip
                             UserInfo.Avatar = ack.UserInfo.Avatar;
                         }
 
-                        await GetMessageUsers(ack.Token);
+                        var users = await GetMessageUsers(ack.Token);
+                        var contacts = await GetContacts(ack.Token);
+                        OpenCoreWindow(users, contacts);
                     }
                 }
             }
         }
 
-        async public Task GetMessageUsers(string token)
+        async public Task<List<Models.ContactItem>> GetContacts(string token)
+        {
+            var req = new Protocol.GetContactListReq { Header = new Protocol.ReqHeader { Token = token }, };
+            var ack = await httpClient.Send<Protocol.GetContactListReq, Protocol.GetContactListAck>(req);
+            var contacts = new List<Models.ContactItem>();
+            if (ack != null && ack.Header.Code == 200 && ack.Contacts != null)
+            {
+                foreach (var item in ack.Contacts)
+                {
+                    contacts.Add(new Models.ContactItem
+                    {
+                        Avatar = item.Avatar,
+                        ContactId = item.ContactId,
+                        Nickname = item.Nickname,
+                        UserId = item.UserId,
+                    });
+                }
+            }
+            return contacts;
+        }
+
+        async public Task<List<Models.MessageUserItem>> GetMessageUsers(string token)
         {
             Token = token;
             var req = new Protocol.GetMessageUserReq
@@ -140,11 +168,6 @@ namespace Voip
             {
                 if (ack.Header.Code == 200 && ack.Users != null)
                 {
-
-                    //Utils.Database.connection.
-                    //缓存数据
-
-
                     var users = new List<Models.MessageUserItem>();
                     foreach (var item in ack.Users)
                     {
@@ -156,11 +179,13 @@ namespace Voip
                             UserId = item.UserId,
                         });
                     }
+                    return users;
                 }
             }
+            return new List<Models.MessageUserItem>();
         }
 
-        public void OpenCoreWindow(List<Models.MessageUserItem> users)
+        public void OpenCoreWindow(List<Models.MessageUserItem> users, List<Models.ContactItem> contacts)
         {
 
 
@@ -174,12 +199,15 @@ namespace Voip
                 //记住密码  
                 if (remberCheck.IsChecked.HasValue)
                 {
-                    UserInfo.Remember = remberCheck.IsChecked.Value ? "1" : "0";
+                    UserInfo.Remember = remberCheck.IsChecked.Value;
                 }
                 if (autoSignCheck.IsChecked.HasValue)
                 {
-                    UserInfo.Remember = "1";
-                    UserInfo.AutoSign = autoSignCheck.IsChecked.Value ? "1" : "0";
+                    UserInfo.AutoSign = autoSignCheck.IsChecked.Value;
+                    if (UserInfo.AutoSign)
+                    {
+                        UserInfo.Remember = true;
+                    }
                 }
                 UserInfo.UpdateCache(uname.Text);
 
@@ -190,6 +218,10 @@ namespace Voip
             foreach (var item in users)
             {
                 coreWindow.MessageUsers.Add(item);
+            }
+            foreach (var item in contacts)
+            {
+                coreWindow.Contacts.Add(item);
             }
             coreWindow.Token = Token;
             var bmp = new BitmapImage();
@@ -204,8 +236,10 @@ namespace Voip
             coreWindow.avatarImg.ImageSource = bmp;
             coreWindow.CellnetClient = new Cellnet.CellnetClient(TCP_HOST, TCP_PORT);
             coreWindow.CellnetClient.OnMessage += coreWindow.CellnetClient_OnMessage;
+            coreWindow.CellnetClient.Connect();
             coreWindow.httpClient = new Utils.HttpClient(HttpURL);
             coreWindow.UserInfo = UserInfo;
+
             coreWindow.Show();
 
 
@@ -214,7 +248,7 @@ namespace Voip
             //}));
         }
 
-      
+
         private void autoSignCheck_Checked(object sender, RoutedEventArgs e)
         {
             remberCheck.IsChecked = true;
@@ -227,8 +261,8 @@ namespace Voip
     {
         //public string Username { get; set; }
         public string Password { get; set; }
-        public string AutoSign { get; set; }
-        public string Remember { get; set; }
+        public bool AutoSign { get; set; }
+        public bool Remember { get; set; }
         public string Avatar { get; set; }
         public string DeviceCode { get; set; }
 
@@ -240,19 +274,7 @@ namespace Voip
 
         public UserInfo(string username)
         {
-            if (username == "")
-            {
-                //读取默认用户 
-                Username = Utils.Cache.GetDefaultUserName();
-                username = Username;
-            }
-            //读取设置
-            //this.Username = Utils.Cache.GetSettingString(Utils.Cache.Username,username);
-            this.Password = Utils.Cache.GetSettingString(Utils.Cache.Password, username);
-            this.AutoSign = Utils.Cache.GetSettingString(Utils.Cache.AutoSignIn, username);
-            this.Remember = Utils.Cache.GetSettingString(Utils.Cache.Remember, username);
-            this.Avatar = Utils.Cache.GetSettingString(Utils.Cache.Avatar, username);
-            this.DeviceCode = Utils.Cache.GetSettingString(Utils.Cache.DeviceCode, username);
+            this.Username = username;
         }
 
         public UserInfo()
@@ -262,18 +284,8 @@ namespace Voip
         public void UpdateCache(string username)
         {
             Utils.Cache.SetDefaultUsername(username);
-            if (Remember == "1")
-            {
-                Utils.Cache.UpdateSettingString(Utils.Cache.Password, username, Password);
-            }
-            else
-            {
-                Utils.Cache.UpdateSettingString(Utils.Cache.Password, username, "");
-            }
-            Utils.Cache.UpdateSettingString(Utils.Cache.AutoSignIn, username, AutoSign);
-            Utils.Cache.UpdateSettingString(Utils.Cache.Remember, username, Remember);
-            Utils.Cache.UpdateSettingString(Utils.Cache.Avatar, username, Avatar);
-            Utils.Cache.UpdateSettingString(Utils.Cache.DeviceCode, username, DeviceCode);
+            this.Username = username;
+            Utils.Cache.CacheUserInfo(this);
         }
     }
 }

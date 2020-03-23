@@ -9,20 +9,39 @@ namespace Voip.Utils
 {
     public class Cache
     {
-        public const string Password = "pwd";
         public const string Username = "uname";
-        public const string Remember = "remem";
-        public const string AutoSignIn = "autos";
-        public const string Avatar = "avatar";
         public const string DeviceCode = "device";
 
 
+        public static string GetDeviceCode()
+        {
+            try
+            {
+                string settingString = ConfigurationManager.AppSettings[DeviceCode].ToString();
+                return settingString;
+            }
+            catch (Exception)
+            {
+                return "";
+            }
+        }
+        public static void CacheDeviceCode(string deviceCode)
+        {
+            Configuration config = ConfigurationManager.OpenExeConfiguration(ConfigurationUserLevel.None);
+
+            if (ConfigurationManager.AppSettings[DeviceCode] != null)
+            {
+                config.AppSettings.Settings.Remove(DeviceCode);
+            }
+            config.AppSettings.Settings.Add(DeviceCode, deviceCode);
+            config.Save(ConfigurationSaveMode.Modified);
+            ConfigurationManager.RefreshSection("appSettings");
+        }
         public static string GetDefaultUserName()
         {
             try
             {
-                var key = "username";
-                string settingString = ConfigurationManager.AppSettings[key].ToString();
+                string settingString = ConfigurationManager.AppSettings[Username].ToString();
                 return settingString;
             }
             catch (Exception)
@@ -32,48 +51,34 @@ namespace Voip.Utils
         }
         public static void SetDefaultUsername(string username)
         {
-            var key = Username;
             Configuration config = ConfigurationManager.OpenExeConfiguration(ConfigurationUserLevel.None);
 
-            if (ConfigurationManager.AppSettings[key] != null)
+            if (ConfigurationManager.AppSettings[Username] != null)
             {
-                config.AppSettings.Settings.Remove(key);
+                config.AppSettings.Settings.Remove(Username);
             }
-            config.AppSettings.Settings.Add(key, username);
+            config.AppSettings.Settings.Add(Username, username);
             config.Save(ConfigurationSaveMode.Modified);
             ConfigurationManager.RefreshSection("appSettings");
         }
-        public static string GetSettingString(string settingName, string username)
+
+
+        public static void CacheUserInfo(UserInfo info)
         {
-            try
-            {
-                var key = string.Format("{0}_{1}", settingName, username);
-                string settingString = ConfigurationManager.AppSettings[key].ToString();
-                return settingString;
-            }
-            catch (Exception)
-            {
-                return "";
-            }
+            var key = "user_local_" + info.Username;
+            Data.Save(key, info);
         }
 
-        /// <summary>
-        /// 更新设置
-        /// </summary>
-        /// <param name="settingName"></param>
-        /// <param name="valueName"></param>
-        public static void UpdateSettingString(string settingName, string username, string valueName)
+        public static UserInfo GetUserInfo(string username)
         {
-            var key = string.Format("{0}_{1}", settingName, username);
-            Configuration config = ConfigurationManager.OpenExeConfiguration(ConfigurationUserLevel.None);
-
-            if (ConfigurationManager.AppSettings[key] != null)
+            var key = "user_local_" + username;
+            var info = Data.Load<UserInfo>(key);
+            if(info == null)
             {
-                config.AppSettings.Settings.Remove(key);
+                return new UserInfo();
             }
-            config.AppSettings.Settings.Add(key, valueName);
-            config.Save(ConfigurationSaveMode.Modified);
-            ConfigurationManager.RefreshSection("appSettings");
+            return info;
         }
+
     }
 }

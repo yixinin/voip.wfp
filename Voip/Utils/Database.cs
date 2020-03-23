@@ -1,6 +1,7 @@
-﻿using System;
+﻿
+using System;
 using System.Collections.Generic;
-using System.Data.SQLite;
+using System.Diagnostics;
 using System.IO;
 using System.Linq;
 using System.Text;
@@ -8,28 +9,74 @@ using System.Threading.Tasks;
 
 namespace Voip.Utils
 {
-    public class Database
+    public class Data
     {
-        // 数据库文件夹
-        static string DbPath = Path.Combine("livechat", "db");
-        // 使用全局静态变量保存连接
-        public static SQLiteConnection connection = CreateDatabaseConnection();
-        //与指定的数据库(实际上就是一个文件)建立连接
-        private static SQLiteConnection CreateDatabaseConnection(string dbName = null)
+
+
+        private static string dir = "data";
+        public static void Save<T>(string key, T value)
         {
-            if (!string.IsNullOrEmpty(DbPath) && !Directory.Exists(DbPath))
-                Directory.CreateDirectory(DbPath);
-            dbName = dbName == null ? "database.db" : dbName;
-            var dbFilePath = Path.Combine(DbPath, dbName);
-            return new SQLiteConnection("DataSource = " + dbFilePath);
-        }
-        public static void Open(SQLiteConnection connection)
-        {
-            if (connection.State != System.Data.ConnectionState.Open)
+            var filename = Path.Combine(dir, key + ".cache");
+            var text = Newtonsoft.Json.JsonConvert.SerializeObject(value);
+            if (!Directory.Exists(dir))
             {
-                connection.Open();
+                Directory.CreateDirectory(dir);
+            }
+            if (File.Exists(filename))
+            {
+                File.Delete(filename);
+            }
+            using (var fs = File.OpenWrite(filename))
+            {
+                var buf = Encoding.UTF8.GetBytes(text);
+                fs.Write(buf, 0, buf.Length);
+                fs.Flush();
             }
         }
+        public static T Load<T>(string key) where T : new()
+        {
+            var filename = Path.Combine(dir, key + ".cache");
+            if (!File.Exists(filename))
+            {
+                return new T();
+            }
+            using (var fs = File.Open(filename, FileMode.Open))
+            {
+                var buf = new byte[fs.Length];
+
+                var n = fs.Read(buf, 0, buf.Length);
+                if (n != buf.Length)
+                {
+                    Debug.WriteLine("read buf error");
+                }
+                var text = Encoding.UTF8.GetString(buf);
+                var t = Newtonsoft.Json.JsonConvert.DeserializeObject<T>(text);
+                return t;
+            }
+
+        }
+        //private static string dbPath = string.Empty;
+        //private static string DbPath
+        //{
+        //    get
+        //    {
+        //        if (string.IsNullOrEmpty(dbPath))
+        //        {
+        //            dbPath = Path.Combine("db", "Sqlite.db");
+        //        }
+
+        //        return dbPath;
+        //    }
+        //}
+
+        //private static SQLiteConnection DbConnection
+        //{
+        //    get
+        //    {
+
+        //        return new SQLiteConnection(DbPath);
+        //    }
+        //}
 
     }
 }
