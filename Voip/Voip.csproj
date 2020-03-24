@@ -91,10 +91,10 @@
     <AllowUnsafeBlocks>true</AllowUnsafeBlocks>
   </PropertyGroup>
   <PropertyGroup>
-    <ManifestCertificateThumbprint>D5320C2C2D347F5258C806D873EC7FE1D2435C73</ManifestCertificateThumbprint>
+    <ManifestCertificateThumbprint>4C11967ACA1D9AC5D65E6810D3D2D3F14DE69EDC</ManifestCertificateThumbprint>
   </PropertyGroup>
   <PropertyGroup>
-    <ManifestKeyFile>InstallVoip_TemporaryKey.pfx</ManifestKeyFile>
+    <ManifestKeyFile>Voip_TemporaryKey.pfx</ManifestKeyFile>
   </PropertyGroup>
   <PropertyGroup>
     <GenerateManifests>true</GenerateManifests>
