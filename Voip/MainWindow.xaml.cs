@@ -281,9 +281,17 @@ namespace Voip
         }
         public void UpdateCache(string username)
         {
-            Utils.Cache.SetDefaultUsername(username);
-            this.Username = username;
-            Utils.Cache.CacheUserInfo(this);
+            try
+            {
+                Utils.Cache.SetDefaultUsername(username);
+                this.Username = username;
+                Utils.Cache.CacheUserInfo(this);
+
+            } catch (Exception ex)
+            {
+
+            }
+            
         }
     }
 }
