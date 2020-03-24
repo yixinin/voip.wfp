@@ -209,14 +209,8 @@ namespace Voip
             coreWindow.avatarImg.ImageSource = bmp;
             coreWindow.CellnetClient = new Cellnet.CellnetClient(Config.HOST, Config.TCP_PORT);
             coreWindow.CellnetClient.OnMessage += coreWindow.CellnetClient_OnMessage;
-            coreWindow.CellnetClient.Connect();
-            if (coreWindow.CellnetClient.IsConnected)
-            {
-                coreWindow.CellnetClient.Send(new Protocol.EchoReq
-                {
-                    Header = new Protocol.ReqHeader { Token = Token }
-                });
-            }
+            coreWindow.CellnetClient.Connect(Token);
+             
             coreWindow.httpClient = new Utils.HttpClient(Config.HttpMsgAddr);
             coreWindow.UserInfo = UserInfo;
 

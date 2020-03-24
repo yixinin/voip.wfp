@@ -235,7 +235,6 @@ namespace Voip
                 var host = addrs[0];
                 var port = short.Parse(addrs[1]);
                 voipWindow.InitVoip(rid, token, host, port);
-                //voipWindow.VoipClient.ConnectTcp();
                 voipWindow.Show();
             }
             else

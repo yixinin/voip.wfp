@@ -206,7 +206,7 @@ namespace Voip.Av
                     Debug.WriteLine("connect to " + Host + ":" + Port.ToString() + " fail");
                 }
 
-            });
+            }).GetAwaiter().GetResult();
         }
 
         public async Task ConnectTcpAsync()
@@ -416,10 +416,10 @@ namespace Voip.Av
         //关闭麦克风
         public void StopCaptureAudio()
         {
-            if (_audioCapture !=null && AudioOn)
+            if (_audioCapture != null && AudioOn)
             {
                 _audioCapture.StopRecording();
-            } 
+            }
             _audioOn = false;
             _audioCapture.Dispose();
         }
@@ -465,7 +465,7 @@ namespace Voip.Av
                     continue;
                 }
                 var body = videoPacketQueue.Dequeue();
-                 
+
                 if (body != null && body.Length > 0)
                 {
                     var buf = Utils.Bytes.GetVideoBuffer(body);
@@ -488,13 +488,13 @@ namespace Voip.Av
 
 
         private void EncodeH264()
-        { 
-            var encoder = new OpenH264Lib.Encoder("openh264-2.0.0-win64.dll"); 
+        {
+            var encoder = new OpenH264Lib.Encoder("openh264-2.0.0-win64.dll");
             OpenH264Lib.Encoder.OnEncodeCallback onEncode = (data, length, frameType) =>
             {
                 //var keyFrame = (frameType == OpenH264Lib.Encoder.FrameType.IDR) || (frameType == OpenH264Lib.Encoder.FrameType.I);
                 videoPacketQueue.Enqueue(data);
-            }; 
+            };
             int bps = 5000 * 1000;         // target bitrate. 5Mbps.
             float keyFrameInterval = 2.0f; // insert key frame interval. unit is second. 
             encoder.Setup(Width, Height, bps, Fps, keyFrameInterval, onEncode);
@@ -606,6 +606,6 @@ namespace Voip.Av
                 return;
             }
             Debug.WriteLine("socket is not connected");
-        } 
+        }
     }
 }

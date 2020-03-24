@@ -64,7 +64,7 @@ namespace Voip.Cellnet
             this.Port = port;
         }
 
-        public void Connect()
+        public void Connect(string token)
         {
             if (this._tcpSocker == null)
             {
@@ -80,11 +80,17 @@ namespace Voip.Cellnet
                 var endPoint = new IPEndPoint(IPAddress.Parse(this.Host), this.Port);
                 this._tcpSocker.ConnectAsync(endPoint).ContinueWith(_Activator =>
                 {
+                    _Activator.Wait();
                     if (_tcpSocker.Connected)
                     {
                         Task.Run(() =>
                         {
                             ReceiveMessage();
+                        });
+                        //发送一条空消息
+                        Send(new Protocol.EchoReq
+                        {
+                            Header = new Protocol.ReqHeader { Token = token }
                         });
                     }
 

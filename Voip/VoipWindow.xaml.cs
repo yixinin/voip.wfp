@@ -52,11 +52,7 @@ namespace Voip
             var videoQueue = new Queue<Av.VideoH264Packet>(FPS * 10);
             VoipClient = new Av.VoipClient(videoQueue, host, port, token, rid);
             VoipClient.AudioBufferRecieved += VoipClient_AudioBufferRecieved;
-            VoipClient.ConnectTcp();
-            while (!VoipClient.IsConnect)
-            {
-
-            }
+            VoipClient.ConnectTcp(); 
             if (VoipClient.IsConnect)
             {
                 AudioDecodder = new G729Decoder();
@@ -68,8 +64,6 @@ namespace Voip
                 VoipClient.CaptureAudio();
                 VoipClient.CaptureVideo();
             }
-            //VoipClient.VideoBufferRecieved += VoipClient_VideoBufferRecieved;
-           
         }
 
         private void hungBtn_Click(object sender, RoutedEventArgs e)
