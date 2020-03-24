@@ -53,6 +53,10 @@ namespace Voip
             VoipClient = new Av.VoipClient(videoQueue, host, port, token, rid);
             VoipClient.AudioBufferRecieved += VoipClient_AudioBufferRecieved;
             VoipClient.ConnectTcp();
+            while (!VoipClient.IsConnect)
+            {
+
+            }
             if (VoipClient.IsConnect)
             {
                 AudioDecodder = new G729Decoder();

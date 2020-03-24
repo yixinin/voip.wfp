@@ -196,8 +196,12 @@ namespace Voip.Av
             });
             _socketConn.ConnectAsync(endPoint).ContinueWith(t =>
             {
-                if (_socketConn.Connected)
+                while (!_socketConn.Connected)
                 {
+
+                }
+                if (_socketConn.Connected)
+                { 
                     socketTask.Start();
                     JoinLive();
                 }
