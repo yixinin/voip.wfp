@@ -4,12 +4,15 @@
   xmlns="http://schemas.microsoft.com/appx/manifest/foundation/windows10"
   xmlns:uap="http://schemas.microsoft.com/appx/manifest/uap/windows10"
   xmlns:rescap="http://schemas.microsoft.com/appx/manifest/foundation/windows10/restrictedcapabilities"
-  IgnorableNamespaces="uap rescap">
+  xmlns:uap4="http://schemas.microsoft.com/appx/manifest/uap/windows10/4"
+  xmlns:iot="http://schemas.microsoft.com/appx/manifest/iot/windows10"
+  xmlns:uap6="http://schemas.microsoft.com/appx/manifest/uap/windows10/6"
+  IgnorableNamespaces="uap rescap uap4 iot uap6">
 
   <Identity
     Name="5f44e6ac-7945-4e16-92fd-8f2e40acf2ba"
     Publisher="CN=yixin"
-    Version="1.0.7.0" />
+    Version="1.0.0.0" />
 
   <Properties>
     <DisplayName>InstallVoip</DisplayName>
@@ -47,6 +50,11 @@
     <rescap:Capability Name="runFullTrust" />
     <Capability Name="internetClientServer"/>
     <Capability Name="privateNetworkClientServer"/>
+    <uap:Capability Name="removableStorage"/>
+    <uap4:Capability Name="userDataTasks"/>
+    <uap:Capability Name="musicLibrary"/>
+    <uap4:Capability Name="offlineMapsManagement"/>
+    <uap6:Capability Name="graphicsCapture"/>
     <DeviceCapability Name="webcam"/>
     <DeviceCapability Name="microphone"/>
   </Capabilities>
