@@ -9,7 +9,7 @@
   <Identity
     Name="5f44e6ac-7945-4e16-92fd-8f2e40acf2ba"
     Publisher="CN=yixin"
-    Version="1.0.1.0" />
+    Version="1.0.3.0" />
 
   <Properties>
     <DisplayName>InstallVoip</DisplayName>
