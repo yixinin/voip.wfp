@@ -341,3 +341,4 @@ healthchecksdb
 # /Voip/dll
 /Voip/Id.cs
 /Voip/frames
+InstallVoip/*

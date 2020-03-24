@@ -91,10 +91,10 @@
     <AllowUnsafeBlocks>true</AllowUnsafeBlocks>
   </PropertyGroup>
   <PropertyGroup>
-    <ManifestCertificateThumbprint>4C11967ACA1D9AC5D65E6810D3D2D3F14DE69EDC</ManifestCertificateThumbprint>
+    <ManifestCertificateThumbprint>D5320C2C2D347F5258C806D873EC7FE1D2435C73</ManifestCertificateThumbprint>
   </PropertyGroup>
   <PropertyGroup>
-    <ManifestKeyFile>Voip_TemporaryKey.pfx</ManifestKeyFile>
+    <ManifestKeyFile>InstallVoip_TemporaryKey.pfx</ManifestKeyFile>
   </PropertyGroup>
   <PropertyGroup>
     <GenerateManifests>true</GenerateManifests>
@@ -123,7 +123,7 @@
     </Reference>
     <Reference Include="OpenH264Lib, Version=1.0.7379.5018, Culture=neutral, processorArchitecture=AMD64">
       <SpecificVersion>False</SpecificVersion>
-      <HintPath>..\..\..\..\source\repos\Voip\Voip\bin\x64\Debug\OpenH264Lib.dll</HintPath>
+      <HintPath>dll\OpenH264Lib.dll</HintPath>
     </Reference>
     <Reference Include="System" />
     <Reference Include="System.Buffers, Version=4.0.2.0, Culture=neutral, PublicKeyToken=cc7b13ffcd2ddd51, processorArchitecture=MSIL">
@@ -281,6 +281,7 @@
       <LastGenOutput>Resources.Designer.cs</LastGenOutput>
     </EmbeddedResource>
     <Compile Include="Models\Message.cs" />
+    <None Include="InstallVoip_TemporaryKey.pfx" />
     <None Include="packages.config" />
     <None Include="Properties\Settings.settings">
       <Generator>SettingsSingleFileGenerator</Generator>
