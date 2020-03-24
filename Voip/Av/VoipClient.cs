@@ -224,6 +224,10 @@ namespace Voip.Av
             Debug.WriteLine("connect to " + endPoint.ToString());
             await _socketConn.ConnectAsync(endPoint);
 
+            while (!_socketConn.Connected)
+            {
+
+            }
             if (_socketConn.Connected)
             {
                 JoinLive();

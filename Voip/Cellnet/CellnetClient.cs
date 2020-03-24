@@ -79,7 +79,10 @@ namespace Voip.Cellnet
                         ReceiveMessage();
                     });
                 });
-
+                while (!_tcpSocker.Connected)
+                {
+                    //wait
+                }
                 this._isConnected = true;
             }
             catch (Exception ex)
@@ -191,7 +194,7 @@ namespace Voip.Cellnet
             }
             catch (Exception ex)
             {
-                Debug.WriteLine("send message ex: ", ex);
+                Debug.WriteLine( string.Format("send message ex: {0}", ex));
             }
         }
 
