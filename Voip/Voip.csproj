@@ -231,7 +231,6 @@
     <Compile Include="Utils\Bytes.cs" />
     <Compile Include="Utils\Cache.cs" />
     <Compile Include="Utils\Cellnet.cs" />
-    <Compile Include="Utils\Database.cs" />
     <Compile Include="Utils\Http.cs" />
     <Compile Include="Utils\Util.cs" />
     <Compile Include="VoipWindow.xaml.cs">

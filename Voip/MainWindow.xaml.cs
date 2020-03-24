@@ -180,32 +180,14 @@ namespace Voip
         }
 
         public void OpenCoreWindow(List<Models.MessageUserItem> users, List<Models.ContactItem> contacts)
-        {
-
-
-            //Dispatcher.BeginInvoke(System.Windows.Threading.DispatcherPriority.Normal, new Action(() =>
-            //{
-
-            //登录成功
-            if (Token != "")
+        { 
+            
+            if (Token == "")
             {
-                //登录成功
-                //记住密码  
-                if (remberCheck.IsChecked.HasValue)
-                {
-                    UserInfo.Remember = remberCheck.IsChecked.Value;
-                }
-                if (autoSignCheck.IsChecked.HasValue)
-                {
-                    UserInfo.AutoSign = autoSignCheck.IsChecked.Value;
-                    if (UserInfo.AutoSign)
-                    {
-                        UserInfo.Remember = true;
-                    }
-                }
-                UserInfo.UpdateCache(uname.Text);
-
+                return;
             }
+            //登录成功
+            CachePwd();
 
             //跳转到主界面
             var coreWindow = new ChatWindow();
@@ -246,7 +228,33 @@ namespace Voip
             //}));
         }
 
+        private void CachePwd()
+        {
+            //登录成功
+            //记住密码  
+            if (remberCheck.IsChecked.HasValue)
+            {
+                UserInfo.Remember = remberCheck.IsChecked.Value;
+            }
+            if (autoSignCheck.IsChecked.HasValue)
+            {
+                UserInfo.AutoSign = autoSignCheck.IsChecked.Value;
+                if (UserInfo.AutoSign)
+                {
+                    UserInfo.Remember = true;
+                }
+            }
+            if (UserInfo.Remember)
+            {
+                UserInfo.Password = pwd.Password;
+            }
+            else
+            {
+                UserInfo.Password = "";
+            }
+            UserInfo.UpdateCache(uname.Text);
 
+        }
         private void autoSignCheck_Checked(object sender, RoutedEventArgs e)
         {
             remberCheck.IsChecked = true;
@@ -287,11 +295,12 @@ namespace Voip
                 this.Username = username;
                 Utils.Cache.CacheUserInfo(this);
 
-            } catch (Exception ex)
+            }
+            catch (Exception ex)
             {
 
             }
-            
+
         }
     }
 }

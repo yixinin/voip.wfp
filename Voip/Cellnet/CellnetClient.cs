@@ -28,12 +28,19 @@ namespace Voip.Cellnet
             }
         }
 
-        //public string Address { get; set; }
-
-        private bool _isConnected;
         private readonly int HEADER_SIZE = 4;
 
-        public bool IsConnected { get { return _isConnected; } }
+        public bool IsConnected
+        {
+            get
+            {
+                if (_tcpSocker == null)
+                {
+                    return false;
+                }
+                return _tcpSocker.Connected;
+            }
+        }
 
         public string Host { get; private set; }
         public int Port { get; private set; }
@@ -70,75 +77,42 @@ namespace Voip.Cellnet
 
             try
             {
-
                 var endPoint = new IPEndPoint(IPAddress.Parse(this.Host), this.Port);
                 this._tcpSocker.ConnectAsync(endPoint).ContinueWith(_Activator =>
                 {
-                    Task.Run(() =>
+                    if (_tcpSocker.Connected)
                     {
-                        ReceiveMessage();
-                    });
+                        Task.Run(() =>
+                        {
+                            ReceiveMessage();
+                        });
+                    }
+
                 });
-                while (!_tcpSocker.Connected)
-                {
-                    //wait
-                }
-                this._isConnected = true;
             }
             catch (Exception ex)
             {
                 Debug.WriteLine("socket connect fail, ex:", ex);
-                this._isConnected = false;
             }
         }
 
-        public async Task ConnectAsync()
-        {
-            if (this._tcpSocker == null)
-            {
-                this._tcpSocker = new Socket(SocketType.Stream, ProtocolType.Tcp);
-            }
-            if (this.Host == "" || this.Port == 0)
-            {
-                return;
-            }
 
-            try
-            {
-
-                var endPoint = new IPEndPoint(IPAddress.Parse(this.Host), this.Port);
-                this._tcpSocker.ConnectAsync(endPoint).ContinueWith(_Activator =>
-                {
-                    //_tcpSocker.Send(new byte[0]);
-                    Task.Run(() =>
-                    {
-                        ReceiveMessage();
-                    });
-                });
-
-                this._isConnected = true;
-            }
-            catch (Exception ex)
-            {
-                Debug.WriteLine("socket connect fail, ex:", ex);
-                this._isConnected = false;
-            }
-
-        }
-
-        //private void _websocket_Closed(IWebSocket sender, WebSocketClosedEventArgs args)
-        //{
-        //    this._isConnected = false;
-        //    OnClosed?.Invoke(sender, args);
-        //}
 
         public void Close()
         {
-            this._tcpSocker.Close();
+            if (_tcpSocker.Connected)
+            {
+                this._tcpSocker.Close();
+            }
+
         }
 
         public void Dispose()
         {
+            if (_tcpSocker != null)
+            {
+
+            }
             this._tcpSocker.Dispose();
         }
 
@@ -146,6 +120,7 @@ namespace Voip.Cellnet
         {
             try
             {
+
                 byte[] data = new byte[message.CalculateSize()];
                 using (var stream = new CodedOutputStream(data))
                 {
@@ -172,45 +147,38 @@ namespace Voip.Cellnet
                     {
                         buffer[i] = data[i - 4];
                     }
-
-                    //for (var i = 0; i < 2; i++)
-                    //{
-                    //    bs[i] = ids[i];
-                    //}
-
-
-
-                    //for (var i = 2; i < bs.Length; i++)
-                    //{
-                    //    bs[i] = data[i - 2];
-                    //}
-
-                    var n = _tcpSocker.Send(buffer);
-                    if (n != buffer.Length)
+                    if (_tcpSocker.Connected)
                     {
-                        Debug.WriteLine(string.Format("send msg not complete, n={0}, expect={1}", n, buffer.Length));
+                        var n = _tcpSocker.Send(buffer);
+                        if (n != buffer.Length)
+                        {
+                            Debug.WriteLine(string.Format("send msg not complete, n={0}, expect={1}", n, buffer.Length));
+                        }
                     }
+
                 }
             }
             catch (Exception ex)
             {
-                Debug.WriteLine( string.Format("send message ex: {0}", ex));
+                Debug.WriteLine(string.Format("send message ex: {0}", ex));
             }
         }
 
 
         private void ReceiveMessage()
         {
-            while (true)
+            while (_tcpSocker.Connected)
             {
-                if (!IsConnected)
-                {
-                    continue;
-                }
+
                 try
                 {
                     var header = new byte[HEADER_SIZE];
                     var n = this._tcpSocker.Receive(header);
+                    if (n == 0)
+                    {
+                        Task.Delay(10).Wait();
+                        continue;
+                    }
                     if (n != HEADER_SIZE)
                     {
                         Debug.WriteLine("read msg header fail");

@@ -190,19 +190,15 @@ namespace Voip.Av
             socketTokenSource = new CancellationTokenSource();
 
 
-            var socketTask = new Task(() =>
-            {
-                Recv(socketTokenSource.Token);
-            });
+
             _socketConn.ConnectAsync(endPoint).ContinueWith(t =>
             {
-                while (!_socketConn.Connected)
-                {
-
-                }
                 if (_socketConn.Connected)
-                { 
-                    socketTask.Start();
+                {
+                    Task.Run(() =>
+                    {
+                        Recv(socketTokenSource.Token);
+                    });
                     JoinLive();
                 }
                 else
@@ -228,10 +224,7 @@ namespace Voip.Av
             Debug.WriteLine("connect to " + endPoint.ToString());
             await _socketConn.ConnectAsync(endPoint);
 
-            while (!_socketConn.Connected)
-            {
 
-            }
             if (_socketConn.Connected)
             {
                 JoinLive();
@@ -260,8 +253,10 @@ namespace Voip.Av
                 {
                     socketTokenSource.Cancel();
                 }
-
-                _socketConn.Disconnect(true);
+                if (_socketConn != null && _socketConn.Connected)
+                {
+                    _socketConn.Disconnect(true);
+                }
             }
             catch (Exception ex)
             {
@@ -312,7 +307,7 @@ namespace Voip.Av
 
         private void ReadVideoFrame(CancellationToken ct)
         {
-            while (true)
+            while (VideoOn && _videoCapture != null && _socketConn.Connected)
             {
                 try
                 {
@@ -421,7 +416,10 @@ namespace Voip.Av
         //关闭麦克风
         public void StopCaptureAudio()
         {
-            _audioCapture.StopRecording();
+            if (_audioCapture !=null && AudioOn)
+            {
+                _audioCapture.StopRecording();
+            } 
             _audioOn = false;
             _audioCapture.Dispose();
         }
@@ -467,9 +465,7 @@ namespace Voip.Av
                     continue;
                 }
                 var body = videoPacketQueue.Dequeue();
-
-
-
+                 
                 if (body != null && body.Length > 0)
                 {
                     var buf = Utils.Bytes.GetVideoBuffer(body);
@@ -492,17 +488,13 @@ namespace Voip.Av
 
 
         private void EncodeH264()
-        {
-            // H264エンコーダーを作成(create H264 encoder)
-            var encoder = new OpenH264Lib.Encoder("openh264-2.0.0-win64.dll");
-            //var firstFrame = new Bitmap(path);
-            // 1フレームエンコードするごとにライターに書き込み(write frame data for each frame encoded)
+        { 
+            var encoder = new OpenH264Lib.Encoder("openh264-2.0.0-win64.dll"); 
             OpenH264Lib.Encoder.OnEncodeCallback onEncode = (data, length, frameType) =>
             {
                 //var keyFrame = (frameType == OpenH264Lib.Encoder.FrameType.IDR) || (frameType == OpenH264Lib.Encoder.FrameType.I);
                 videoPacketQueue.Enqueue(data);
-            };
-            // H264エンコーダーの設定(encoder setup)
+            }; 
             int bps = 5000 * 1000;         // target bitrate. 5Mbps.
             float keyFrameInterval = 2.0f; // insert key frame interval. unit is second. 
             encoder.Setup(Width, Height, bps, Fps, keyFrameInterval, onEncode);
@@ -522,7 +514,7 @@ namespace Voip.Av
         }
         private void Recv(CancellationToken ct)
         {
-            while (true)
+            while (_socketConn.Connected)
             {
                 try
                 {
@@ -614,8 +606,6 @@ namespace Voip.Av
                 return;
             }
             Debug.WriteLine("socket is not connected");
-        }
-
-
+        } 
     }
 }
